@@ -50,13 +50,13 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      padding-top: 10px;
+      padding-top: calc(10px + env(safe-area-inset-top));
       padding-bottom: 8px;
       position: relative;
     }
 
     .top-bar {
-      padding: 0 16px 2px;
+      padding: calc(env(safe-area-inset-top) * 0.35) 16px 2px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -632,6 +632,19 @@
       position: relative;
       overflow: hidden;
     }
+    .task-card.task-disabled {
+      opacity: 0.55;
+      filter: saturate(0.7);
+    }
+
+    .task-card.task-disabled::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.35);
+      pointer-events: none;
+    }
+
 
     .task-card::before {
       content: "";
@@ -1232,7 +1245,7 @@
           >
             <div class="task-top">
               <div class="task-title">Daily check-in</div>
-              <div class="task-reward">+500 🌕</div>
+              <div class="task-reward" id="dailyRewardText">+500 🌕</div>
             </div>
             <div class="task-desc">
               Claim your once-per-day login bonus to keep your streak alive.
@@ -1275,7 +1288,7 @@
           >
             <div class="task-top">
               <div class="task-title">Double points boost</div>
-              <div class="task-reward">x2 · 10 mins</div>
+              <div class="task-reward" id="doubleBoostRewardText">x2 · 10 mins</div>
             </div>
             <div class="task-desc">
               Activate 10 minutes of x2 tap points via a sponsor action or by spending points.
@@ -1290,7 +1303,7 @@
           >
             <div class="task-top">
               <div class="task-title">Emergency energy refill</div>
-              <div class="task-reward">⚡ Full bar</div>
+              <div class="task-reward" id="energyRefillRewardText">⚡ Full bar</div>
             </div>
             <div class="task-desc">
               Refill energy instantly by completing a sponsor action or spending points.
@@ -1491,6 +1504,11 @@ const LAST_CHECKIN_KEY = "ae_last_checkin";
 const DAILY_TASK_KEY = "ae_daily_claimed_day";
 const INSTAGRAM_TASK_KEY = "ae_instagram_done";
 const INVITE_TASK_KEY = "ae_invite_done";
+const DAILY_CLAIM_AT_KEY = "ae_daily_claim_at";
+const INSTAGRAM_CLAIM_AT_KEY = "ae_instagram_claim_at";
+
+// UI-only cooldown helpers (backend will enforce too once we patch it)
+const DAILY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const maxEnergy = 50;
 const perTapBase = 1;
@@ -1534,6 +1552,10 @@ const withdrawBalanceText = document.getElementById("withdrawBalanceText");
 const globalRankValueEl = document.getElementById("globalRankValue");
 const globalRankFillEl = document.getElementById("globalRankFill");
 const globalRankNextTextEl = document.getElementById("globalRankNextText");
+const dailyRewardTextEl = document.getElementById("dailyRewardText");
+const doubleBoostRewardTextEl = document.getElementById("doubleBoostRewardText");
+const energyRefillRewardTextEl = document.getElementById("energyRefillRewardText");
+
 
 function showToast(message) {
   toastText.textContent = message;
@@ -1714,7 +1736,87 @@ function render() {
 
   // Global rank block
   updateGlobalRankVisuals();
+  updateTaskCardStates();
 }
+
+
+function msToCountdown(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+function getStoredMs(key) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function setStoredMs(key, ms) {
+  localStorage.setItem(key, String(ms));
+}
+
+function updateTaskCardStates() {
+  // Daily check-in cooldown (UI only; backend will enforce once/day too)
+  const lastDaily = getStoredMs(DAILY_CLAIM_AT_KEY);
+  const now = Date.now();
+  const remaining = lastDaily ? Math.max(0, DAILY_COOLDOWN_MS - (now - lastDaily)) : 0;
+  const dailyCard = document.querySelector('.task-card[data-code="daily"]');
+
+  if (dailyRewardTextEl && dailyCard) {
+    if (remaining > 0) {
+      dailyRewardTextEl.textContent = `Claim in ${msToCountdown(remaining)}`;
+      dailyCard.classList.add("task-disabled");
+    } else {
+      dailyRewardTextEl.textContent = "+500 🌕";
+      dailyCard.classList.remove("task-disabled");
+    }
+  }
+
+  // Instagram one-time claim (UI only; backend should enforce later)
+  const igClaimedAt = getStoredMs(INSTAGRAM_CLAIM_AT_KEY);
+  const igCard = document.querySelector('.task-card[data-code="join_tg"]');
+  if (igCard) {
+    if (igClaimedAt) {
+      igCard.classList.add("task-disabled");
+    } else {
+      igCard.classList.remove("task-disabled");
+    }
+  }
+
+  // Double boost button: show active state
+  const doubleCard = document.querySelector('.task-card[data-code="double_boost"]');
+  if (doubleCard && doubleBoostRewardTextEl) {
+    if (state.doubleBoostActive) {
+      doubleBoostRewardTextEl.textContent = "Active ✨";
+      doubleCard.classList.add("task-disabled");
+    } else {
+      doubleBoostRewardTextEl.textContent = "x2 · 10 mins";
+      doubleCard.classList.remove("task-disabled");
+    }
+  }
+
+  // Energy refill: disable if already full
+  const energyCard = document.querySelector('.task-card[data-code="boost_energy"]');
+  if (energyCard && energyRefillRewardTextEl) {
+    if ((state.energy || 0) >= maxEnergy) {
+      energyRefillRewardTextEl.textContent = "Full ✅";
+      energyCard.classList.add("task-disabled");
+    } else {
+      energyRefillRewardTextEl.textContent = "⚡ Full bar";
+      energyCard.classList.remove("task-disabled");
+    }
+  }
+}
+
+// keep task timers fresh
+setInterval(updateTaskCardStates, 1000);
+
 
 // 🔐 Centralised POST helper – now refuses to call backend with no Telegram info
 async function apiPost(path, body) {
@@ -1791,6 +1893,7 @@ async function initFromBackend() {
   if (res && res.ok) {
     applyBackendState(res);
     render();
+    updateTaskCardStates();
   }
 }
 
@@ -1825,47 +1928,78 @@ tapBtn.addEventListener("click", async () => {
 });
 
 async function handleDailyTask(reward) {
+  // UI cooldown guard (backend should enforce too)
+  const lastDaily = getStoredMs(DAILY_CLAIM_AT_KEY);
+  const now = Date.now();
+  if (lastDaily && now - lastDaily < DAILY_COOLDOWN_MS) {
+    const remaining = DAILY_COOLDOWN_MS - (now - lastDaily);
+    showToast(`Daily already claimed. Try again in ${msToCountdown(remaining)}.`);
+    updateTaskCardStates();
+    return;
+  }
+
   const res = await apiPost("/api/task", { taskName: "daily", reward });
 
-  if (!res) {
-    return; // apiPost already handled toast
-  }
+  if (!res) return;
 
   if (!res.ok) {
     if (res.reason !== "NO_TELEGRAM_ID") {
+      // If backend has its own cooldown reason, surface it
+      if (res.nextAt) {
+        const nextAt = new Date(res.nextAt).getTime();
+        if (Number.isFinite(nextAt)) {
+          const remaining2 = Math.max(0, nextAt - Date.now());
+          showToast(`Daily already claimed. Try again in ${msToCountdown(remaining2)}.`);
+          setStoredMs(DAILY_CLAIM_AT_KEY, Date.now()); // lock UI for the day
+          updateTaskCardStates();
+          return;
+        }
+      }
       showToast("Daily task already claimed or error.");
     }
     return;
   }
 
+  // Mark claimed locally so the UI doesn't keep offering it
+  setStoredMs(DAILY_CLAIM_AT_KEY, Date.now());
+
   applyBackendState(res);
   render();
+  updateTaskCardStates();
 
   showToast(`+${reward.toLocaleString("en-GB")} daily bonus added`);
 }
 
 async function handleInstagramTask(reward) {
-  const done = localStorage.getItem(INSTAGRAM_TASK_KEY);
-  if (done === "1") {
+  const claimedAt = getStoredMs(INSTAGRAM_CLAIM_AT_KEY);
+  if (claimedAt) {
     window.open("https://www.instagram.com/airdropempireapp/", "_blank");
     showToast("Instagram boost already claimed.");
+    updateTaskCardStates();
     return;
   }
 
-  localStorage.setItem(INSTAGRAM_TASK_KEY, "1");
-  state.bal += reward;
-  state.today += reward;
-  saveStateLocal(state);
-  render();
-  showToast(`+${reward.toLocaleString("en-GB")} Instagram bonus`);
-
+  // Always open the link (user action), but do NOT grant points locally.
   window.open("https://www.instagram.com/airdropempireapp/", "_blank");
 
   const res = await apiPost("/api/task", { taskName: "instagram_follow", reward });
-  if (res && res.ok) {
-    applyBackendState(res);
-    render();
+
+  if (!res) return;
+
+  if (!res.ok) {
+    if (res.reason !== "NO_TELEGRAM_ID") {
+      showToast("Instagram bonus already claimed or error.");
+    }
+    return;
   }
+
+  setStoredMs(INSTAGRAM_CLAIM_AT_KEY, Date.now());
+
+  applyBackendState(res);
+  render();
+  updateTaskCardStates();
+
+  showToast(`+${reward.toLocaleString("en-GB")} Instagram bonus`);
 }
 
 async function handleInviteTask() {
@@ -1880,32 +2014,32 @@ const ENERGY_REFILL_COST_CLIENT = 500;   // keep in sync with backend
 const DOUBLE_BOOST_COST_CLIENT = 1000;   // keep in sync with backend
 
 async function handleEnergyBoostTask() {
-  const hasPoints = (state.bal || 0) >= ENERGY_REFILL_COST_CLIENT;
-
-  let method = "action";
-
-  if (hasPoints) {
-    const useFreeAction = window.confirm(
-      `Energy refill options:\n\n` +
-      `OK = Complete FREE sponsor action (no points spent).\n` +
-      `Cancel = Spend ${ENERGY_REFILL_COST_CLIENT.toLocaleString("en-GB")} pts to refill instantly.`
-    );
-    method = useFreeAction ? "action" : "points";
-  } else {
-    method = "action";
-  }
-
-  const res = await apiPost("/api/boost/energy", { method });
-
-  if (!res) {
+  if ((state.energy || 0) >= maxEnergy) {
+    showToast("Your energy is already full.");
+    updateTaskCardStates();
     return;
   }
+
+  const hasPoints = (state.bal || 0) >= ENERGY_REFILL_COST_CLIENT;
+  if (!hasPoints) {
+    showToast(`Need ${ENERGY_REFILL_COST_CLIENT.toLocaleString("en-GB")} points to refill.`);
+    return;
+  }
+
+  const ok = window.confirm(
+    `Spend ${ENERGY_REFILL_COST_CLIENT.toLocaleString("en-GB")} points to refill energy now?`
+  );
+  if (!ok) return;
+
+  const res = await apiPost("/api/boost/energy", { method: "points" });
+
+  if (!res) return;
 
   if (!res.ok) {
     if (res.reason === "ENERGY_FULL") {
       showToast("Your energy is already full.");
     } else if (res.reason === "NOT_ENOUGH_POINTS") {
-      showToast("Not enough points for paid refill.");
+      showToast("Not enough points for energy refill.");
     } else if (res.reason !== "NO_TELEGRAM_ID") {
       showToast("Energy boost failed – try again.");
     }
@@ -1914,38 +2048,33 @@ async function handleEnergyBoostTask() {
 
   applyBackendState(res);
   render();
+  updateTaskCardStates();
 
-  if (res.message) {
-    showToast(res.message);
-  } else {
-    showToast("⚡ Energy refilled!");
-  }
+  showToast(res.message || "⚡ Energy refilled!");
 }
 
 // Double points boost handler
 async function handleDoubleBoostTask() {
-  const hasPoints = (state.bal || 0) >= DOUBLE_BOOST_COST_CLIENT;
-
-  let method = "action";
-
-  if (hasPoints) {
-    const useFreeAction = window.confirm(
-      `Double points boost options:\n\n` +
-      `OK = Complete FREE sponsor action (no points spent).\n` +
-      `Cancel = Spend ${DOUBLE_BOOST_COST_CLIENT.toLocaleString(
-        "en-GB"
-      )} pts for 10 minutes of x2 taps.`
-    );
-    method = useFreeAction ? "action" : "points";
-  } else {
-    method = "action";
-  }
-
-  const res = await apiPost("/api/boost/double", { method });
-
-  if (!res) {
+  if (state.doubleBoostActive) {
+    showToast("Double points is already active.");
+    updateTaskCardStates();
     return;
   }
+
+  const hasPoints = (state.bal || 0) >= DOUBLE_BOOST_COST_CLIENT;
+  if (!hasPoints) {
+    showToast(`Need ${DOUBLE_BOOST_COST_CLIENT.toLocaleString("en-GB")} points for double boost.`);
+    return;
+  }
+
+  const ok = window.confirm(
+    `Spend ${DOUBLE_BOOST_COST_CLIENT.toLocaleString("en-GB")} points for 10 minutes of x2 taps?`
+  );
+  if (!ok) return;
+
+  const res = await apiPost("/api/boost/double", { method: "points" });
+
+  if (!res) return;
 
   if (!res.ok) {
     if (res.reason === "NOT_ENOUGH_POINTS") {
@@ -1958,12 +2087,9 @@ async function handleDoubleBoostTask() {
 
   applyBackendState(res);
   render();
+  updateTaskCardStates();
 
-  if (res.message) {
-    showToast(res.message);
-  } else {
-    showToast("✨ Double points boost activated!");
-  }
+  showToast(res.message || "✨ Double points boost activated!");
 }
 
 function handleProQuest() {
@@ -1973,6 +2099,34 @@ function handleProQuest() {
 // Task click router (includes double_boost)
 document.querySelectorAll(".task-card").forEach((card) => {
   card.addEventListener("click", () => {
+    if (card.classList.contains("task-disabled")) {
+      const codeDisabled = card.getAttribute("data-code");
+      if (codeDisabled === "daily") {
+        showToast("Daily check-in is on cooldown.");
+      } else if (codeDisabled === "double_boost") {
+        showToast("Double points is already active.");
+      } else if (codeDisabled === "boost_energy") {
+        showToast("Energy is already full.");
+      } else {
+        showToast("This quest is not available right now.");
+      }
+      return;
+    }
+    if (card.classList.contains("task-disabled")) {
+      // Keep UX clean: explain why it's disabled
+      const codeDisabled = card.getAttribute("data-code");
+      if (codeDisabled === "daily") {
+        showToast("Daily check-in is on cooldown.");
+      } else if (codeDisabled === "double_boost") {
+        showToast("Double points is already active.");
+      } else if (codeDisabled === "boost_energy") {
+        showToast("Energy is already full.");
+      } else {
+        showToast("This quest is not available yet.");
+      }
+      return;
+    }
+
     const code = card.getAttribute("data-code");
     const reward = parseInt(card.getAttribute("data-reward") || "0", 10);
 

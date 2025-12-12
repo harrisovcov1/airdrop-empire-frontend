@@ -7,6 +7,10 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
+
+  <!-- Telegram WebApp JS – needed so window.Telegram exists -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <style>
     * {
       box-sizing: border-box;
@@ -232,7 +236,7 @@
       font-size: 13px;
     }
 
-    /* ✅ NEW: Global rank block inside the main card */
+    /* Global rank block */
     .global-rank-block {
       margin-top: 6px;
       width: 100%;
@@ -300,7 +304,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* ✅ END Global rank block */
 
     .rank-bar {
       margin-top: 10px;
@@ -1126,7 +1129,7 @@
             <span id="rankName">Recruit</span>
           </span>
 
-          <!-- ✅ NEW: Global Rank block -->
+          <!-- Global Rank block -->
           <div class="global-rank-block">
             <div class="global-rank-top-row">
               <span class="global-rank-label">Global rank</span>
@@ -1139,7 +1142,7 @@
               Play to join the leaderboard
             </div>
           </div>
-          <!-- ✅ END Global Rank block -->
+          <!-- END Global Rank block -->
         </div>
       </div>
 
@@ -1220,6 +1223,7 @@
           Complete one-time boosts now. Pro quests & on-chain missions are coming soon.
         </div>
 
+        <!-- Boost quests grid with Double Points + Energy refill -->
         <div class="tasks-grid">
           <div
             class="task-card"
@@ -1263,21 +1267,35 @@
             </div>
           </div>
 
-<!-- NEW: Energy refill boost -->
-<div
-  class="task-card"
-  data-code="boost_energy"
-  data-reward="0"
->
-  <div class="task-top">
-    <div class="task-title">Emergency energy refill</div>
-    <div class="task-reward">⚡ Full bar</div>
-  </div>
-  <div class="task-desc">
-    Refill energy instantly by completing a sponsor action or spending points.
-  </div>
-</div>
+          <!-- Double points boost -->
+          <div
+            class="task-card"
+            data-code="double_boost"
+            data-reward="0"
+          >
+            <div class="task-top">
+              <div class="task-title">Double points boost</div>
+              <div class="task-reward">x2 · 10 mins</div>
+            </div>
+            <div class="task-desc">
+              Activate 10 minutes of x2 tap points via a sponsor action or by spending points.
+            </div>
+          </div>
 
+          <!-- Energy refill boost -->
+          <div
+            class="task-card"
+            data-code="boost_energy"
+            data-reward="0"
+          >
+            <div class="task-top">
+              <div class="task-title">Emergency energy refill</div>
+              <div class="task-reward">⚡ Full bar</div>
+            </div>
+            <div class="task-desc">
+              Refill energy instantly by completing a sponsor action or spending points.
+            </div>
+          </div>
 
           <div
             class="task-card"
@@ -1411,11 +1429,13 @@
     <span id="toastText">Saved</span>
   </div>
 
+  <!-- SCRIPT STARTS IN PART 2 -->
   <script>
 const tg =
   window.Telegram && window.Telegram.WebApp
     ? window.Telegram.WebApp
     : null;
+
 if (tg) {
   tg.expand();
   if (typeof tg.requestFullscreen === "function") {
@@ -1425,152 +1445,148 @@ if (tg) {
   tg.setBackgroundColor("#050816");
 }
 
-  // Signed mini-app payload from Telegram (for backend)
-  const initDataRaw = tg && tg.initData ? tg.initData : "";
+// Signed mini-app payload from Telegram (for backend)
+const initDataRaw = tg && tg.initData ? tg.initData : "";
 
-  // ✅ Primary: real Telegram user id from WebApp
-  const telegramIdFromWebApp =
-    tg && tg.initDataUnsafe && tg.initDataUnsafe.user
-      ? tg.initDataUnsafe.user.id
-      : null;
+// Real Telegram user id from WebApp
+const telegramIdFromWebApp =
+  tg && tg.initDataUnsafe && tg.initDataUnsafe.user
+    ? tg.initDataUnsafe.user.id
+    : null;
 
-  // ✅ Dev / browser fallback: make a stable pseudo Telegram ID if we don't
-  // get a real one from Telegram. Lets you test in Safari/Chrome and also
-  // covers weird clients where initData is missing.
-  let fallbackTelegramId = null;
-  if (!telegramIdFromWebApp) {
-    const stored = localStorage.getItem("ae_dev_telegram_id");
-    if (stored) {
-      const parsed = Number(stored);
-      if (!Number.isNaN(parsed) && parsed > 0) {
-        fallbackTelegramId = parsed;
-      }
-    }
-
-    if (!fallbackTelegramId) {
-      // 10-digit pseudo id
-      fallbackTelegramId =
-        1000000000 + Math.floor(Math.random() * 9000000000);
-      localStorage.setItem(
-        "ae_dev_telegram_id",
-        String(fallbackTelegramId)
-      );
+// Dev / browser fallback ID
+let fallbackTelegramId = null;
+if (!telegramIdFromWebApp) {
+  const stored = localStorage.getItem("ae_dev_telegram_id");
+  if (stored) {
+    const parsed = Number(stored);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      fallbackTelegramId = parsed;
     }
   }
 
-  // ✅ This is the ID we *actually* send to the backend on every request
-  const effectiveTelegramId = telegramIdFromWebApp || fallbackTelegramId || null;
+  if (!fallbackTelegramId) {
+    fallbackTelegramId =
+      1000000000 + Math.floor(Math.random() * 9000000000);
+    localStorage.setItem(
+      "ae_dev_telegram_id",
+      String(fallbackTelegramId)
+    );
+  }
+}
 
-  const API_BASE = "https://airdrop-empire-bot.onrender.com";
-  const FALLBACK_REF_LINK = "https://t.me/airdropempireappbot";
+// ID we send to backend
+const effectiveTelegramId = telegramIdFromWebApp || fallbackTelegramId || null;
 
-  const BALANCE_KEY = "ae_balance";
-  const ENERGY_KEY = "ae_energy";
-  const TODAY_KEY = "ae_today";
-  const LAST_DAY_KEY = "ae_lastday";
-  
-    const STREAK_DAYS_KEY = "ae_streak_days";
-    const LAST_CHECKIN_KEY = "ae_last_checkin";
-    const DAILY_TASK_KEY = "ae_daily_claimed_day";
-    const INSTAGRAM_TASK_KEY = "ae_instagram_done";
-    const INVITE_TASK_KEY = "ae_invite_done";
+const API_BASE = "https://airdrop-empire-bot.onrender.com";
+const FALLBACK_REF_LINK = "https://t.me/airdropempireappbot";
 
-    const maxEnergy = 50;
-    const perTapBase = 1;
+const BALANCE_KEY = "ae_balance";
+const ENERGY_KEY = "ae_energy";
+const TODAY_KEY = "ae_today";
+const LAST_DAY_KEY = "ae_lastday";
 
-    const balanceText = document.getElementById("balanceText");
-    const energyText = document.getElementById("energyText");
-    const todayText = document.getElementById("todayText");
-    const perTapText = document.getElementById("perTap");
-    const tapBtn = document.getElementById("tapBtn");
-    const toast = document.getElementById("toast");
-    const toastText = document.getElementById("toastText");
+const STREAK_DAYS_KEY = "ae_streak_days";
+const LAST_CHECKIN_KEY = "ae_last_checkin";
+const DAILY_TASK_KEY = "ae_daily_claimed_day";
+const INSTAGRAM_TASK_KEY = "ae_instagram_done";
+const INVITE_TASK_KEY = "ae_invite_done";
 
-    const rankNameEl = document.getElementById("rankName");
-    const rankPointsTextEl = document.getElementById("rankPointsText");
-    const nextRankPointsTextEl = document.getElementById("nextRankPointsText");
-    const rankProgressFill = document.getElementById("rankProgressFill");
+const maxEnergy = 50;
+const perTapBase = 1;
 
-    const streakDaysText = document.getElementById("streakDaysText");
-    const streakMeterFill = document.getElementById("streakMeterFill");
+const balanceText = document.getElementById("balanceText");
+const energyText = document.getElementById("energyText");
+const todayText = document.getElementById("todayText");
+const perTapText = document.getElementById("perTap");
+const tapBtn = document.getElementById("tapBtn");
+const toast = document.getElementById("toast");
+const toastText = document.getElementById("toastText");
 
-    const tabFarm = document.getElementById("tabFarm");
-    const tabTasks = document.getElementById("tabTasks");
-    const tabFriends = document.getElementById("tabFriends");
-    const tabWithdraw = document.getElementById("tabWithdraw");
+const rankNameEl = document.getElementById("rankName");
+const rankPointsTextEl = document.getElementById("rankPointsText");
+const nextRankPointsTextEl = document.getElementById("nextRankPointsText");
+const rankProgressFill = document.getElementById("rankProgressFill");
 
-    const sheetBackdrop = document.getElementById("sheetBackdrop");
-    const friendsSheet = document.getElementById("friendsSheet");
-    const withdrawSheet = document.getElementById("withdrawSheet");
-    const friendsClose = document.getElementById("friendsClose");
-    const withdrawClose = document.getElementById("withdrawClose");
+const streakDaysText = document.getElementById("streakDaysText");
+const streakMeterFill = document.getElementById("streakMeterFill");
 
-    const friendsJoinedText = document.getElementById("friendsJoinedText");
-    const referralPointsText = document.getElementById("referralPointsText");
-    const inviteLinkText = document.getElementById("inviteLinkText");
-    const copyInviteBtn = document.getElementById("copyInviteBtn");
-    const shareTelegramBtn = document.getElementById("shareTelegramBtn");
+const tabFarm = document.getElementById("tabFarm");
+const tabTasks = document.getElementById("tabTasks");
+const tabFriends = document.getElementById("tabFriends");
+const tabWithdraw = document.getElementById("tabWithdraw");
 
-    const withdrawBalanceText = document.getElementById("withdrawBalanceText");
+const sheetBackdrop = document.getElementById("sheetBackdrop");
+const friendsSheet = document.getElementById("friendsSheet");
+const withdrawSheet = document.getElementById("withdrawSheet");
+const friendsClose = document.getElementById("friendsClose");
+const withdrawClose = document.getElementById("withdrawClose");
 
-    // ✅ NEW: Global rank DOM refs
-    const globalRankValueEl = document.getElementById("globalRankValue");
-    const globalRankFillEl = document.getElementById("globalRankFill");
-    const globalRankNextTextEl = document.getElementById("globalRankNextText");
+const friendsJoinedText = document.getElementById("friendsJoinedText");
+const referralPointsText = document.getElementById("referralPointsText");
+const inviteLinkText = document.getElementById("inviteLinkText");
+const copyInviteBtn = document.getElementById("copyInviteBtn");
+const shareTelegramBtn = document.getElementById("shareTelegramBtn");
 
-    function showToast(message) {
-      toastText.textContent = message;
-      toast.classList.add("show");
-      setTimeout(() => {
-        toast.classList.remove("show");
-      }, 2100);
-    }
+const withdrawBalanceText = document.getElementById("withdrawBalanceText");
 
-    function formatNumber(n) {
-      return n.toLocaleString("en-GB");
-    }
+// Global rank DOM refs
+const globalRankValueEl = document.getElementById("globalRankValue");
+const globalRankFillEl = document.getElementById("globalRankFill");
+const globalRankNextTextEl = document.getElementById("globalRankNextText");
 
-    function getTodayString() {
-      return new Date().toDateString();
-    }
+function showToast(message) {
+  toastText.textContent = message;
+  toast.classList.add("show");
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2100);
+}
 
-    const rankConfig = [
-      { name: "Recruit", min: 0, max: 10000 },
-      { name: "Grinder", min: 10000, max: 50000 },
-      { name: "Operator", min: 50000, max: 150000 },
-      { name: "Commander", min: 150000, max: 500000 },
-      { name: "General", min: 500000, max: 1500000 },
-      { name: "Empire OG", min: 1500000, max: 999999999 },
-    ];
+function formatNumber(n) {
+  return n.toLocaleString("en-GB");
+}
 
-    const state = {
-      bal: 0,
-      energy: maxEnergy,
-      today: 0,
-      lastDay: "",
-      streakDays: 0,
-      lastCheckin: "",
-      friendsJoined: 0,
-      referralPoints: 0,
-      inviteLink: FALLBACK_REF_LINK,
-      globalRank: null,
-      globalTotal: null,
+function getTodayString() {
+  return new Date().toDateString();
+}
 
-      // 🔥 NEW: double points boost client state
-      doubleBoostActive: false,
-      doubleBoostUntil: null,
-    };
+const rankConfig = [
+  { name: "Recruit", min: 0, max: 10000 },
+  { name: "Grinder", min: 10000, max: 50000 },
+  { name: "Operator", min: 50000, max: 150000 },
+  { name: "Commander", min: 150000, max: 500000 },
+  { name: "General", min: 500000, max: 1500000 },
+  { name: "Empire OG", min: 1500000, max: 999999999 },
+];
 
+const state = {
+  bal: 0,
+  energy: maxEnergy,
+  today: 0,
+  lastDay: "",
+  streakDays: 0,
+  lastCheckin: "",
+  friendsJoined: 0,
+  referralPoints: 0,
+  inviteLink: FALLBACK_REF_LINK,
+  globalRank: null,
+  globalTotal: null,
 
-    function saveStateLocal(s) {
-      localStorage.setItem(BALANCE_KEY, String(s.bal));
-      localStorage.setItem(ENERGY_KEY, String(s.energy));
-      localStorage.setItem(TODAY_KEY, String(s.today));
-      localStorage.setItem(LAST_DAY_KEY, s.lastDay || "");
+  // Double points boost client state
+  doubleBoostActive: false,
+  doubleBoostUntil: null,
+};
 
-      localStorage.setItem(STREAK_DAYS_KEY, String(s.streakDays || 0));
-      localStorage.setItem(LAST_CHECKIN_KEY, s.lastCheckin || "");
-    }
+function saveStateLocal(s) {
+  localStorage.setItem(BALANCE_KEY, String(s.bal));
+  localStorage.setItem(ENERGY_KEY, String(s.energy));
+  localStorage.setItem(TODAY_KEY, String(s.today));
+  localStorage.setItem(LAST_DAY_KEY, s.lastDay || "");
+
+  localStorage.setItem(STREAK_DAYS_KEY, String(s.streakDays || 0));
+  localStorage.setItem(LAST_CHECKIN_KEY, s.lastCheckin || "");
+}
 
 function loadStateLocal() {
   const todayStr = getTodayString();
@@ -1590,122 +1606,124 @@ function loadStateLocal() {
   state.lastCheckin = savedLastCheckin;
 }
 
-
-    function findRank(bal) {
-      let current = rankConfig[0];
-      for (const r of rankConfig) {
-        if (bal >= r.min && bal < r.max) {
-          current = r;
-          break;
-        }
-        if (bal >= r.max) {
-          current = r;
-        }
-      }
-      return current;
+function findRank(bal) {
+  let current = rankConfig[0];
+  for (const r of rankConfig) {
+    if (bal >= r.min && bal < r.max) {
+      current = r;
+      break;
     }
-
-    // ✅ NEW: Pseudo global rank calc (local-only until backend leaderboard routes)
-    function updateGlobalRankVisuals() {
-      if (!globalRankValueEl || !globalRankFillEl || !globalRankNextTextEl) return;
-
-      const balance = Math.max(0, Number(state.bal || 0));
-
-      // Milestones for "next" text & bar (still based on balance/points)
-      const milestones = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
-      let nextMilestone = milestones[milestones.length - 1];
-      for (const m of milestones) {
-        if (balance < m) {
-          nextMilestone = m;
-          break;
-        }
-      }
-
-      const hasBackendRank =
-        typeof state.globalRank === "number" &&
-        state.globalRank > 0 &&
-        typeof state.globalTotal === "number" &&
-        state.globalTotal > 0;
-
-      if (hasBackendRank) {
-        const rank = Math.max(1, Math.floor(state.globalRank));
-        const total = Math.max(rank, Math.floor(state.globalTotal));
-        globalRankValueEl.textContent = `#${formatNumber(rank)}`;
-
-        // Progress is based on percentile (higher progress = better rank)
-        const percentile = 1 - rank / total;
-        const clamped = Math.max(0, Math.min(1, percentile));
-        globalRankFillEl.style.transform = `scaleX(${clamped})`;
-      } else {
-        // Fallback to local-only pseudo rank based on balance
-        const totalPlayersApprox = 1000000;
-        const cappedBalance = Math.max(0, Math.min(balance, totalPlayersApprox));
-        const percentile = 1 - cappedBalance / totalPlayersApprox;
-        const pseudoRank = Math.max(1, Math.round(percentile * totalPlayersApprox));
-        globalRankValueEl.textContent = `#${formatNumber(pseudoRank)}`;
-
-        const fill = Math.max(0, Math.min(1, balance / nextMilestone));
-        globalRankFillEl.style.transform = `scaleX(${fill})`;
-      }
-
-      if (balance === 0) {
-        globalRankNextTextEl.textContent = "Play to join the leaderboard";
-      } else if (balance >= milestones[milestones.length - 1]) {
-        globalRankNextTextEl.textContent = "You’re among the top players";
-      } else {
-        const diff = nextMilestone - balance;
-        globalRankNextTextEl.textContent = `+${formatNumber(diff)} pts to next milestone`;
-      }
+    if (bal >= r.max) {
+      current = r;
     }
+  }
+  return current;
+}
 
-    function render() {
-      balanceText.textContent = formatNumber(state.bal);
-      todayText.textContent = formatNumber(state.today);
+// Global rank visuals (local + backend)
+function updateGlobalRankVisuals() {
+  if (!globalRankValueEl || !globalRankFillEl || !globalRankNextTextEl) return;
 
-      // 🔥 Show correct points per tap (x2 when boost active)
-      const effectivePerTap = state.doubleBoostActive ? perTapBase * 2 : perTapBase;
-      if (perTapText) {
-        perTapText.textContent = `+${effectivePerTap}`;
-      }
+  const balance = Math.max(0, Number(state.bal || 0));
 
-
-      const energyPct = Math.max(0, Math.min(1, state.energy / maxEnergy));
-      const energyFill = document.getElementById("energyFill");
-      if (energyFill) {
-        energyFill.style.transform = `scaleX(${energyPct})`;
-      }
-      energyText.textContent = `${state.energy} / ${maxEnergy}`;
-
-      const rank = findRank(state.bal);
-      rankNameEl.textContent = rank.name;
-      rankPointsTextEl.textContent = formatNumber(state.bal);
-      const nextRankPoints = rank.max;
-      nextRankPointsTextEl.textContent = formatNumber(nextRankPoints);
-      const rankMetricPoints = document.getElementById("rankMetricPointsText");
-      if (rankMetricPoints) {
-        rankMetricPoints.textContent = formatNumber(state.bal);
-      }
-
-      let range = rank.max - rank.min;
-      if (range <= 0) range = 1;
-      const progress = Math.max(0, Math.min(1, (state.bal - rank.min) / range));
-      rankProgressFill.style.transform = `scaleX(${progress})`;
-
-      streakDaysText.textContent = `${state.streakDays} day${state.streakDays === 1 ? "" : "s"}`;
-      const streakPct = Math.max(0, Math.min(1, state.streakDays / 7));
-      streakMeterFill.style.width = `${Math.round(streakPct * 100)}%`;
-
-      friendsJoinedText.textContent = formatNumber(state.friendsJoined || 0);
-      referralPointsText.textContent = formatNumber(state.referralPoints || 0);
-      inviteLinkText.textContent = state.inviteLink || FALLBACK_REF_LINK;
-
-      withdrawBalanceText.textContent = formatNumber(state.bal);
-
-      // ✅ update the new global rank block
-      updateGlobalRankVisuals();
+  const milestones = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+  let nextMilestone = milestones[milestones.length - 1];
+  for (const m of milestones) {
+    if (balance < m) {
+      nextMilestone = m;
+      break;
     }
+  }
 
+  const hasBackendRank =
+    typeof state.globalRank === "number" &&
+    state.globalRank > 0 &&
+    typeof state.globalTotal === "number" &&
+    state.globalTotal > 0;
+
+  if (hasBackendRank) {
+    const rank = Math.max(1, Math.floor(state.globalRank));
+    const total = Math.max(rank, Math.floor(state.globalTotal));
+    globalRankValueEl.textContent = `#${formatNumber(rank)}`;
+
+    const percentile = 1 - rank / total;
+    const clamped = Math.max(0, Math.min(1, percentile));
+    globalRankFillEl.style.transform = `scaleX(${clamped})`;
+  } else {
+    const totalPlayersApprox = 1000000;
+    const cappedBalance = Math.max(0, Math.min(balance, totalPlayersApprox));
+    const percentile = 1 - cappedBalance / totalPlayersApprox;
+    const pseudoRank = Math.max(1, Math.round(percentile * totalPlayersApprox));
+    globalRankValueEl.textContent = `#${formatNumber(pseudoRank)}`;
+
+    const fill = Math.max(0, Math.min(1, balance / nextMilestone));
+    globalRankFillEl.style.transform = `scaleX(${fill})`;
+  }
+
+  if (balance === 0) {
+    globalRankNextTextEl.textContent = "Play to join the leaderboard";
+  } else if (balance >= milestones[milestones.length - 1]) {
+    globalRankNextTextEl.textContent = "You’re among the top players";
+  } else {
+    const diff = nextMilestone - balance;
+    globalRankNextTextEl.textContent = `+${formatNumber(diff)} pts to next milestone`;
+  }
+}
+
+function render() {
+  balanceText.textContent = formatNumber(state.bal);
+  todayText.textContent = formatNumber(state.today);
+
+  // Points per tap (x2 when boost active)
+  const effectivePerTap = state.doubleBoostActive ? perTapBase * 2 : perTapBase;
+  if (perTapText) {
+    perTapText.textContent = `+${effectivePerTap}`;
+  }
+
+  const energyPct = Math.max(0, Math.min(1, state.energy / maxEnergy));
+  const energyFill = document.getElementById("energyFill");
+  if (energyFill) {
+    energyFill.style.transform = `scaleX(${energyPct})`;
+  }
+  energyText.textContent = `${state.energy} / ${maxEnergy}`;
+
+  const rank = findRank(state.bal);
+  rankNameEl.textContent = rank.name;
+  rankPointsTextEl.textContent = formatNumber(state.bal);
+  const nextRankPoints = rank.max;
+  nextRankPointsTextEl.textContent = formatNumber(nextRankPoints);
+  const rankMetricPoints = document.getElementById("rankMetricPointsText");
+  if (rankMetricPoints) {
+    rankMetricPoints.textContent = formatNumber(state.bal);
+  }
+
+  let range = rank.max - rank.min;
+  if (range <= 0) range = 1;
+  const progress = Math.max(0, Math.min(1, (state.bal - rank.min) / range));
+  rankProgressFill.style.transform = `scaleX(${progress})`;
+
+  streakDaysText.textContent = `${state.streakDays} day${state.streakDays === 1 ? "" : "s"}`;
+  const streakPct = Math.max(0, Math.min(1, state.streakDays / 7));
+  streakMeterFill.style.width = `${Math.round(streakPct * 100)}%`;
+
+  friendsJoinedText.textContent = formatNumber(state.friendsJoined || 0);
+  referralPointsText.textContent = formatNumber(state.referralPoints || 0);
+  inviteLinkText.textContent = state.inviteLink || FALLBACK_REF_LINK;
+
+  withdrawBalanceText.textContent = formatNumber(state.bal);
+
+  // Global rank block
+  updateGlobalRankVisuals();
+}
+
+// 🔐 Centralised POST helper – now refuses to call backend with no Telegram info
 async function apiPost(path, body) {
+  if (!initDataRaw && !effectiveTelegramId) {
+    console.warn("No Telegram auth data – open inside Telegram mini app.");
+    showToast("Open from Telegram to save your progress.");
+    return { ok: false, reason: "NO_TELEGRAM_ID" };
+  }
+
   try {
     const res = await fetch(API_BASE + path, {
       method: "POST",
@@ -1714,7 +1732,7 @@ async function apiPost(path, body) {
       },
       body: JSON.stringify({
         initData: initDataRaw || "",
-        telegram_id: effectiveTelegramId, // 🔥 always send *some* id
+        telegram_id: effectiveTelegramId,
         ...body,
       }),
     });
@@ -1728,80 +1746,76 @@ async function apiPost(path, body) {
   }
 }
 
+function applyBackendState(data) {
+  if (!data || !data.ok) return;
 
-    function applyBackendState(data) {
-      if (!data || !data.ok) return;
+  if (typeof data.balance === "number") {
+    state.bal = data.balance;
+  }
 
-      if (typeof data.balance === "number") {
-        // Backend is the source of truth for balance
-        state.bal = data.balance;
-      }
+  if (typeof data.energy === "number") state.energy = data.energy;
+  if (typeof data.today === "number") state.today = data.today;
 
-      if (typeof data.energy === "number") state.energy = data.energy;
-      if (typeof data.today === "number") state.today = data.today;
+  if (typeof data.referrals_count === "number") {
+    state.friendsJoined = data.referrals_count;
+  }
+  if (typeof data.referrals_points === "number") {
+    state.referralPoints = data.referrals_points;
+  }
 
-      if (typeof data.referrals_count === "number") {
-        state.friendsJoined = data.referrals_count;
-      }
-      if (typeof data.referrals_points === "number") {
-        state.referralPoints = data.referrals_points;
-      }
+  if (typeof data.global_rank === "number") {
+    state.globalRank = data.global_rank;
+  }
 
-      if (typeof data.global_rank === "number") {
-        state.globalRank = data.global_rank;
-      }
+  if (typeof data.global_total === "number") {
+    state.globalTotal = data.global_total;
+  }
 
-      if (typeof data.global_total === "number") {
-        state.globalTotal = data.global_total;
-      }
+  // Double boost flags from backend
+  if (typeof data.double_boost_active === "boolean") {
+    state.doubleBoostActive = data.double_boost_active;
+  }
+  if (data.double_boost_until) {
+    state.doubleBoostUntil = data.double_boost_until;
+  }
 
-      // 🔥 NEW: double boost flags from backend
-      if (typeof data.double_boost_active === "boolean") {
-        state.doubleBoostActive = data.double_boost_active;
-      }
-      if (data.double_boost_until) {
-        state.doubleBoostUntil = data.double_boost_until;
-      }
+  if (data.invite_link) {
+    state.inviteLink = data.invite_link;
+  }
 
-      if (data.invite_link) {
-        state.inviteLink = data.invite_link;
-      }
+  saveStateLocal(state);
+}
 
-
-      saveStateLocal(state);
-    }
-
-    async function initFromBackend() {
-      const res = await apiPost("/api/state", {});
-      if (res && res.ok) {
-        applyBackendState(res);
-        render();
-      }
-    }
-
+async function initFromBackend() {
+  const res = await apiPost("/api/state", {});
+  if (res && res.ok) {
+    applyBackendState(res);
+    render();
+  }
+}
 
 tapBtn.addEventListener("click", async () => {
-  // Don’t even try if we already know we’re at 0 on the client
   if (state.energy <= 0) {
     showToast("⚡ Out of energy – come back later.");
     return;
   }
 
   try {
-    // Let the backend spend 1 energy + add points (x2 handled server-side)
     const res = await apiPost("/api/tap", {});
 
     if (!res || res.ok !== true) {
       console.error("Tap backend error:", res);
-      showToast("Network error – tap not saved.");
+      if (res && res.reason === "NO_TELEGRAM_ID") {
+        // already toasted in apiPost
+      } else {
+        showToast("Network error – tap not saved.");
+      }
       return;
     }
 
-    // Use backend as the single source of truth
     applyBackendState(res);
     render();
 
-    // 🔥 Toast reflects x2 when boost is active
     const perTap = state.doubleBoostActive ? perTapBase * 2 : perTapBase;
     showToast(`+${perTap.toLocaleString("en-GB")} points`);
   } catch (err) {
@@ -1810,64 +1824,60 @@ tapBtn.addEventListener("click", async () => {
   }
 });
 
-
-
-
 async function handleDailyTask(reward) {
   const res = await apiPost("/api/task", { taskName: "daily", reward });
 
   if (!res) {
-    showToast("Network error – daily not saved.");
-    return;
+    return; // apiPost already handled toast
   }
 
   if (!res.ok) {
-    showToast("Daily task already claimed or error.");
+    if (res.reason !== "NO_TELEGRAM_ID") {
+      showToast("Daily task already claimed or error.");
+    }
     return;
   }
 
-  // Backend is the ONLY authority for updates
   applyBackendState(res);
   render();
 
   showToast(`+${reward.toLocaleString("en-GB")} daily bonus added`);
 }
 
+async function handleInstagramTask(reward) {
+  const done = localStorage.getItem(INSTAGRAM_TASK_KEY);
+  if (done === "1") {
+    window.open("https://www.instagram.com/airdropempireapp/", "_blank");
+    showToast("Instagram boost already claimed.");
+    return;
+  }
 
+  localStorage.setItem(INSTAGRAM_TASK_KEY, "1");
+  state.bal += reward;
+  state.today += reward;
+  saveStateLocal(state);
+  render();
+  showToast(`+${reward.toLocaleString("en-GB")} Instagram bonus`);
 
-    async function handleInstagramTask(reward) {
-      const done = localStorage.getItem(INSTAGRAM_TASK_KEY);
-      if (done === "1") {
-        window.open("https://www.instagram.com/airdropempireapp/", "_blank");
-        showToast("Instagram boost already claimed.");
-        return;
-      }
+  window.open("https://www.instagram.com/airdropempireapp/", "_blank");
 
-      localStorage.setItem(INSTAGRAM_TASK_KEY, "1");
-      state.bal += reward;
-      state.today += reward;
-      saveStateLocal(state);
-      render();
-      showToast(`+${reward.toLocaleString("en-GB")} Instagram bonus`);
+  const res = await apiPost("/api/task", { taskName: "instagram_follow", reward });
+  if (res && res.ok) {
+    applyBackendState(res);
+    render();
+  }
+}
 
-      window.open("https://www.instagram.com/airdropempireapp/", "_blank");
+async function handleInviteTask() {
+  sheetBackdrop.classList.add("show");
+  friendsSheet.classList.add("show");
+  setActiveTab(tabFriends);
+  showToast("Share your link – you earn when friends actually join.");
+}
 
-      const res = await apiPost("/api/task", { taskName: "instagram_follow", reward });
-      if (res && res.ok) {
-        applyBackendState(res);
-        render();
-      }
-    }
-
-    async function handleInviteTask() {
-      sheetBackdrop.classList.add("show");
-      friendsSheet.classList.add("show");
-      setActiveTab(tabFriends);
-      showToast("Share your link – you earn when friends actually join.");
-    }
-
-
-const ENERGY_REFILL_COST_CLIENT = 500; // keep in sync with backend
+// ⚡ Energy refill boost
+const ENERGY_REFILL_COST_CLIENT = 500;   // keep in sync with backend
+const DOUBLE_BOOST_COST_CLIENT = 1000;   // keep in sync with backend
 
 async function handleEnergyBoostTask() {
   const hasPoints = (state.bal || 0) >= ENERGY_REFILL_COST_CLIENT;
@@ -1888,7 +1898,7 @@ async function handleEnergyBoostTask() {
   const res = await apiPost("/api/boost/energy", { method });
 
   if (!res) {
-    return; // apiPost shows network error toast
+    return;
   }
 
   if (!res.ok) {
@@ -1896,7 +1906,7 @@ async function handleEnergyBoostTask() {
       showToast("Your energy is already full.");
     } else if (res.reason === "NOT_ENOUGH_POINTS") {
       showToast("Not enough points for paid refill.");
-    } else {
+    } else if (res.reason !== "NO_TELEGRAM_ID") {
       showToast("Energy boost failed – try again.");
     }
     return;
@@ -1912,12 +1922,55 @@ async function handleEnergyBoostTask() {
   }
 }
 
+// Double points boost handler
+async function handleDoubleBoostTask() {
+  const hasPoints = (state.bal || 0) >= DOUBLE_BOOST_COST_CLIENT;
 
+  let method = "action";
 
-    function handleProQuest() {
-      showToast("Pro quests are coming soon.");
+  if (hasPoints) {
+    const useFreeAction = window.confirm(
+      `Double points boost options:\n\n` +
+      `OK = Complete FREE sponsor action (no points spent).\n` +
+      `Cancel = Spend ${DOUBLE_BOOST_COST_CLIENT.toLocaleString(
+        "en-GB"
+      )} pts for 10 minutes of x2 taps.`
+    );
+    method = useFreeAction ? "action" : "points";
+  } else {
+    method = "action";
+  }
+
+  const res = await apiPost("/api/boost/double", { method });
+
+  if (!res) {
+    return;
+  }
+
+  if (!res.ok) {
+    if (res.reason === "NOT_ENOUGH_POINTS") {
+      showToast("Not enough points for double boost.");
+    } else if (res.reason !== "NO_TELEGRAM_ID") {
+      showToast("Double boost failed – try again.");
     }
+    return;
+  }
 
+  applyBackendState(res);
+  render();
+
+  if (res.message) {
+    showToast(res.message);
+  } else {
+    showToast("✨ Double points boost activated!");
+  }
+}
+
+function handleProQuest() {
+  showToast("Pro quests are coming soon.");
+}
+
+// Task click router (includes double_boost)
 document.querySelectorAll(".task-card").forEach((card) => {
   card.addEventListener("click", () => {
     const code = card.getAttribute("data-code");
@@ -1929,419 +1982,417 @@ document.querySelectorAll(".task-card").forEach((card) => {
       handleInstagramTask(reward);
     } else if (code === "invite_friend") {
       handleInviteTask();
+    } else if (code === "double_boost") {
+      handleDoubleBoostTask();
     } else if (code === "boost_energy") {
-      handleEnergyBoostTask();      // 🔥 NEW
+      handleEnergyBoostTask();
     } else if (code === "pro_quest") {
       handleProQuest();
     }
   });
 });
 
-
-    function setActiveTab(activeBtn) {
-      [tabFarm, tabTasks, tabFriends, tabWithdraw].forEach((btn) => {
-        if (!btn) return;
-        if (btn === activeBtn) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
-      });
+function setActiveTab(activeBtn) {
+  [tabFarm, tabTasks, tabFriends, tabWithdraw].forEach((btn) => {
+    if (!btn) return;
+    if (btn === activeBtn) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
     }
+  });
+}
 
-    tabFarm.addEventListener("click", () => {
-      setActiveTab(tabFarm);
-      sheetBackdrop.classList.remove("show");
-      friendsSheet.classList.remove("show");
-      withdrawSheet.classList.remove("show");
-    });
+tabFarm.addEventListener("click", () => {
+  setActiveTab(tabFarm);
+  sheetBackdrop.classList.remove("show");
+  friendsSheet.classList.remove("show");
+  withdrawSheet.classList.remove("show");
+});
 
-    tabTasks.addEventListener("click", () => {
-      setActiveTab(tabTasks);
-      showToast("Scroll down to see all quests.");
-    });
+tabTasks.addEventListener("click", () => {
+  setActiveTab(tabTasks);
+  showToast("Scroll down to see all quests.");
+});
 
-    tabFriends.addEventListener("click", () => {
-      setActiveTab(tabFriends);
-      openLeaderboard("friends");
-    });
+tabFriends.addEventListener("click", () => {
+  setActiveTab(tabFriends);
+  openLeaderboard("friends");
+});
 
-    tabWithdraw.addEventListener("click", async () => {
-      setActiveTab(tabWithdraw);
-      sheetBackdrop.classList.add("show");
-      withdrawSheet.classList.add("show");
-      const res = await apiPost("/api/withdraw/info", {});
-      if (res && res.ok && typeof res.balance === "number") {
-        withdrawBalanceText.textContent = formatNumber(res.balance);
-      } else {
-        withdrawBalanceText.textContent = formatNumber(state.bal);
-      }
-    });
+tabWithdraw.addEventListener("click", async () => {
+  setActiveTab(tabWithdraw);
+  sheetBackdrop.classList.add("show");
+  withdrawSheet.classList.add("show");
+  const res = await apiPost("/api/withdraw/info", {});
+  if (res && res.ok && typeof res.balance === "number") {
+    withdrawBalanceText.textContent = formatNumber(res.balance);
+  } else {
+    withdrawBalanceText.textContent = formatNumber(state.bal);
+  }
+});
 
-    friendsClose.addEventListener("click", () => {
-      friendsSheet.classList.remove("show");
-      sheetBackdrop.classList.remove("show");
-      setActiveTab(tabFarm);
-    });
+friendsClose.addEventListener("click", () => {
+  friendsSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+  setActiveTab(tabFarm);
+});
 
-    withdrawClose.addEventListener("click", () => {
-      withdrawSheet.classList.remove("show");
-      sheetBackdrop.classList.remove("show");
-      setActiveTab(tabFarm);
-    });
+withdrawClose.addEventListener("click", () => {
+  withdrawSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+  setActiveTab(tabFarm);
+});
 
-    sheetBackdrop.addEventListener("click", () => {
-      friendsSheet.classList.remove("show");
-      withdrawSheet.classList.remove("show");
-      sheetBackdrop.classList.remove("show");
-      setActiveTab(tabFarm);
-    });
+sheetBackdrop.addEventListener("click", () => {
+  friendsSheet.classList.remove("show");
+  withdrawSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+  setActiveTab(tabFarm);
+});
 
-    copyInviteBtn.addEventListener("click", async () => {
-      const link = state.inviteLink || FALLBACK_REF_LINK;
-      try {
-        await navigator.clipboard.writeText(link);
-        showToast("Invite link copied");
-      } catch (e) {
-        showToast("Could not copy link");
-      }
-    });
+copyInviteBtn.addEventListener("click", async () => {
+  const link = state.inviteLink || FALLBACK_REF_LINK;
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast("Invite link copied");
+  } catch (e) {
+    showToast("Could not copy link");
+  }
+});
 
-    shareTelegramBtn.addEventListener("click", () => {
-      const link = state.inviteLink || FALLBACK_REF_LINK;
-      const text = encodeURIComponent(
-        `🔥 Join me in Airdrop Empire and farm the airdrop:\n${link}`
-      );
-      window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`, "_blank");
-    });
+shareTelegramBtn.addEventListener("click", () => {
+  const link = state.inviteLink || FALLBACK_REF_LINK;
+  const text = encodeURIComponent(
+    `🔥 Join me in Airdrop Empire and farm the airdrop:\n${link}`
+  );
+  window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`, "_blank");
+});
 
-
-    // ---------------- LEADERBOARD OVERLAY (GLOBAL / DAILY / FRIENDS) ----------------
-    const leaderboardHTML = `
-      <div id="leaderboardScreen" style="
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        display: none;
-        flex-direction: column;
-        background: radial-gradient(circle at top left, rgba(251,191,36,0.15), transparent 55%),
-                    radial-gradient(circle at bottom right, rgba(59,130,246,0.25), #020617 65%);
-        color: #e5e7eb;
-        padding: 16px 16px 24px 16px;
-        box-sizing: border-box;
+// ---------------- LEADERBOARD OVERLAY ----------------
+const leaderboardHTML = `
+  <div id="leaderboardScreen" style="
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    background: radial-gradient(circle at top left, rgba(251,191,36,0.15), transparent 55%),
+                radial-gradient(circle at bottom right, rgba(59,130,246,0.25), #020617 65%);
+    color: #e5e7eb;
+    padding: 16px 16px 24px 16px;
+    box-sizing: border-box;
+  ">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <div style="display:flex; flex-direction:column;">
+        <span style="font-size:14px; opacity:0.7;">Airdrop Empire</span>
+        <span style="font-size:20px; font-weight:700;">Leaderboard</span>
+      </div>
+      <button id="lbCloseBtn" style="
+        width:32px;
+        height:32px;
+        border-radius:999px;
+        border:none;
+        background:rgba(15,23,42,0.9);
+        color:#e5e7eb;
+        font-size:18px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
       ">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-          <div style="display:flex; flex-direction:column;">
-            <span style="font-size:14px; opacity:0.7;">Airdrop Empire</span>
-            <span style="font-size:20px; font-weight:700;">Leaderboard</span>
-          </div>
-          <button id="lbCloseBtn" style="
-            width:32px;
-            height:32px;
-            border-radius:999px;
-            border:none;
-            background:rgba(15,23,42,0.9);
-            color:#e5e7eb;
-            font-size:18px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-          ">
-            ×
-          </button>
+        ×
+      </button>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <button id="lbTabGlobal" class="lb-tab-btn" style="
+        flex:1;
+        border-radius:999px;
+        border:none;
+        padding:8px 0;
+        font-size:14px;
+        font-weight:600;
+        background:rgba(15,23,42,0.9);
+        color:#e5e7eb;
+      ">Global</button>
+      <button id="lbTabDaily" class="lb-tab-btn" style="
+        flex:1;
+        border-radius:999px;
+        border:none;
+        padding:8px 0;
+        font-size:14px;
+        font-weight:600;
+        background:rgba(15,23,42,0.5);
+        color:#9ca3af;
+      ">Daily</button>
+      <button id="lbTabFriends" class="lb-tab-btn" style="
+        flex:1;
+        border-radius:999px;
+        border:none;
+        padding:8px 0;
+        font-size:14px;
+        font-weight:600;
+        background:rgba(15,23,42,0.5);
+        color:#9ca3af;
+      ">Friends</button>
+    </div>
+
+    <div id="lbMySummary" style="
+      border-radius:16px;
+      padding:10px 12px;
+      background:linear-gradient(90deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9));
+      margin-bottom:12px;
+      font-size:12px;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+    ">
+      <div id="lbMySummaryText">Your rank info will appear here.</div>
+    </div>
+
+    <div id="lbOvertakeBanner" style="display:none; margin-bottom:12px;"></div>
+
+    <div id="lbContent" style="
+      flex:1;
+      overflow-y:auto;
+      padding-right:4px;
+    ">
+    </div>
+
+    <div id="lbFooterInvite" style="
+      margin-top:12px;
+      font-size:12px;
+      opacity:0.9;
+      text-align:center;
+    ">
+      Invite friends from the Friends tab to climb the leaderboard faster.
+    </div>
+  </div>
+`;
+
+document.body.insertAdjacentHTML("beforeend", leaderboardHTML);
+
+const leaderboardScreen = document.getElementById("leaderboardScreen");
+const lbCloseBtn = document.getElementById("lbCloseBtn");
+const lbTabGlobal = document.getElementById("lbTabGlobal");
+const lbTabDaily = document.getElementById("lbTabDaily");
+const lbTabFriends = document.getElementById("lbTabFriends");
+const lbContent = document.getElementById("lbContent");
+const lbMySummary = document.getElementById("lbMySummary");
+const lbMySummaryText = document.getElementById("lbMySummaryText");
+const lbOvertakeBanner = document.getElementById("lbOvertakeBanner");
+const lbFooterInvite = document.getElementById("lbFooterInvite");
+function setLeaderboardTabActive(activeKey) {
+  const tabs = [
+    { key: "global", el: lbTabGlobal },
+    { key: "daily", el: lbTabDaily },
+    { key: "friends", el: lbTabFriends },
+  ];
+  tabs.forEach(({ key, el }) => {
+    if (!el) return;
+    if (key === activeKey) {
+      el.style.background = "linear-gradient(135deg,#fbbf24,#fb923c)";
+      el.style.color = "#111827";
+    } else {
+      el.style.background = "rgba(15,23,42,0.7)";
+      el.style.color = "#9ca3af";
+    }
+  });
+}
+
+function openLeaderboard(initialTab) {
+  if (!leaderboardScreen) return;
+  leaderboardScreen.style.display = "flex";
+  document.body.style.overflow = "hidden";
+  const tab = initialTab || "global";
+  if (tab === "friends") {
+    setLeaderboardTabActive("friends");
+    loadFriendsLeaderboard();
+  } else if (tab === "daily") {
+    setLeaderboardTabActive("daily");
+    loadDailyLeaderboard();
+  } else {
+    setLeaderboardTabActive("global");
+    loadGlobalLeaderboard();
+  }
+}
+
+function closeLeaderboard() {
+  if (!leaderboardScreen) return;
+  leaderboardScreen.style.display = "none";
+  document.body.style.overflow = "";
+}
+
+lbCloseBtn.addEventListener("click", () => {
+  closeLeaderboard();
+  setActiveTab(tabFarm);
+});
+
+function renderMySummary(prefix, rank, total) {
+  if (!lbMySummaryText) return;
+  if (!rank || !total) {
+    lbMySummaryText.textContent = "Play to join the leaderboard.";
+    return;
+  }
+  lbMySummaryText.textContent = `${prefix} #${formatNumber(rank)} of ${formatNumber(total)} players`;
+}
+
+function renderList(items, getRank, getName, getValue, highlightTid) {
+  if (!lbContent) return;
+  if (!Array.isArray(items) || items.length === 0) {
+    lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">No data yet. Start playing to appear here.</div>';
+    return;
+  }
+  let html = "";
+  for (const row of items) {
+    const rank = getRank(row);
+    const name = getName(row) || "Player";
+    const value = getValue(row);
+    const isMe = highlightTid && Number(row.telegram_id) === Number(highlightTid);
+    html += `
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        padding:10px 12px;
+        margin-bottom:8px;
+        border-radius:12px;
+        background:${isMe ? "rgba(251,191,36,0.15)" : "rgba(15,23,42,0.9)"};
+        border:${isMe ? "1px solid rgba(251,191,36,0.8)" : "1px solid rgba(15,23,42,0.9)"};
+        font-size:13px;
+      ">
+        <div>
+          <div style="font-weight:600;">#${formatNumber(rank)} · ${name}</div>
         </div>
-
-        <div style="display:flex; gap:8px; margin-bottom:16px;">
-          <button id="lbTabGlobal" class="lb-tab-btn" style="
-            flex:1;
-            border-radius:999px;
-            border:none;
-            padding:8px 0;
-            font-size:14px;
-            font-weight:600;
-            background:rgba(15,23,42,0.9);
-            color:#e5e7eb;
-          ">Global</button>
-          <button id="lbTabDaily" class="lb-tab-btn" style="
-            flex:1;
-            border-radius:999px;
-            border:none;
-            padding:8px 0;
-            font-size:14px;
-            font-weight:600;
-            background:rgba(15,23,42,0.5);
-            color:#9ca3af;
-          ">Daily</button>
-          <button id="lbTabFriends" class="lb-tab-btn" style="
-            flex:1;
-            border-radius:999px;
-            border:none;
-            padding:8px 0;
-            font-size:14px;
-            font-weight:600;
-            background:rgba(15,23,42,0.5);
-            color:#9ca3af;
-          ">Friends</button>
-        </div>
-
-        <div id="lbMySummary" style="
-          border-radius:16px;
-          padding:10px 12px;
-          background:linear-gradient(90deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9));
-          margin-bottom:12px;
-          font-size:12px;
-          display:flex;
-          justify-content:space-between;
-          gap:8px;
-        ">
-          <div id="lbMySummaryText">Your rank info will appear here.</div>
-        </div>
-
-        <div id="lbOvertakeBanner" style="display:none; margin-bottom:12px;"></div>
-
-        <div id="lbContent" style="
-          flex:1;
-          overflow-y:auto;
-          padding-right:4px;
-        ">
-        </div>
-
-        <div id="lbFooterInvite" style="
-          margin-top:12px;
-          font-size:12px;
-          opacity:0.9;
-          text-align:center;
-        ">
-          Invite friends from the Friends tab to climb the leaderboard faster.
+        <div style="text-align:right; font-variant-numeric:tabular-nums;">
+          <div>${formatNumber(value)} pts</div>
         </div>
       </div>
     `;
+  }
+  lbContent.innerHTML = html;
+}
 
-    document.body.insertAdjacentHTML("beforeend", leaderboardHTML);
-
-    const leaderboardScreen = document.getElementById("leaderboardScreen");
-    const lbCloseBtn = document.getElementById("lbCloseBtn");
-    const lbTabGlobal = document.getElementById("lbTabGlobal");
-    const lbTabDaily = document.getElementById("lbTabDaily");
-    const lbTabFriends = document.getElementById("lbTabFriends");
-    const lbContent = document.getElementById("lbContent");
-    const lbMySummary = document.getElementById("lbMySummary");
-    const lbMySummaryText = document.getElementById("lbMySummaryText");
-    const lbOvertakeBanner = document.getElementById("lbOvertakeBanner");
-    const lbFooterInvite = document.getElementById("lbFooterInvite"); // ← NEW LINE
-
-    function setLeaderboardTabActive(activeKey) {
-      const tabs = [
-        { key: "global", el: lbTabGlobal },
-        { key: "daily", el: lbTabDaily },
-        { key: "friends", el: lbTabFriends },
-      ];
-      tabs.forEach(({ key, el }) => {
-        if (!el) return;
-        if (key === activeKey) {
-          el.style.background = "linear-gradient(135deg,#fbbf24,#fb923c)";
-          el.style.color = "#111827";
-        } else {
-          el.style.background = "rgba(15,23,42,0.7)";
-          el.style.color = "#9ca3af";
-        }
-      });
+function loadGlobalLeaderboard() {
+  lbOvertakeBanner.style.display = "none";
+  lbOvertakeBanner.innerHTML = "";
+  lbFooterInvite.style.display = "block";
+  lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Loading global leaderboard…</div>';
+  apiPost("/api/leaderboard/global", {}).then((res) => {
+    if (!res || !res.ok) {
+      lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Error loading leaderboard.</div>';
+      renderMySummary("Global rank", null, null);
+      return;
     }
+    const me = res.me || {};
+    renderMySummary("Global rank", me.global_rank, me.global_total);
+    renderList(
+      res.global || [],
+      (row) => row.global_rank,
+      (row) => row.username || row.first_name || row.last_name,
+      (row) => row.balance || 0,
+      me.telegram_id
+    );
+  });
+}
 
-    function openLeaderboard(initialTab) {
-      if (!leaderboardScreen) return;
-      leaderboardScreen.style.display = "flex";
-      document.body.style.overflow = "hidden";
-      const tab = initialTab || "global";
-      if (tab === "friends") {
-        setLeaderboardTabActive("friends");
-        loadFriendsLeaderboard();
-      } else if (tab === "daily") {
-        setLeaderboardTabActive("daily");
-        loadDailyLeaderboard();
-      } else {
-        setLeaderboardTabActive("global");
-        loadGlobalLeaderboard();
-      }
+function loadDailyLeaderboard() {
+  lbOvertakeBanner.style.display = "none";
+  lbOvertakeBanner.innerHTML = "";
+  lbFooterInvite.style.display = "block";
+  lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Loading daily ranks…</div>';
+  apiPost("/api/leaderboard/daily", {}).then((res) => {
+    if (!res || !res.ok) {
+      lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Error loading daily leaderboard.</div>';
+      renderMySummary("Daily rank", null, null);
+      return;
     }
+    const me = res.me || {};
+    renderMySummary("Daily rank", me.daily_rank, me.daily_total);
+    renderList(
+      res.daily || [],
+      (row) => row.daily_rank,
+      (row) => row.username || row.first_name || row.last_name,
+      (row) => row.today_farmed || 0,
+      me.telegram_id
+    );
+  });
+}
 
-    function closeLeaderboard() {
-      if (!leaderboardScreen) return;
-      leaderboardScreen.style.display = "none";
-      document.body.style.overflow = "";
-    }
-
-    lbCloseBtn.addEventListener("click", () => {
-      closeLeaderboard();
-      setActiveTab(tabFarm);
-    });
-
-    function renderMySummary(prefix, rank, total) {
-      if (!lbMySummaryText) return;
-      if (!rank || !total) {
-        lbMySummaryText.textContent = "Play to join the leaderboard.";
-        return;
-      }
-      lbMySummaryText.textContent = `${prefix} #${formatNumber(rank)} of ${formatNumber(total)} players`;
-    }
-
-    function renderList(items, getRank, getName, getValue, highlightTid) {
-      if (!lbContent) return;
-      if (!Array.isArray(items) || items.length === 0) {
-        lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">No data yet. Start playing to appear here.</div>';
-        return;
-      }
-      let html = "";
-      for (const row of items) {
-        const rank = getRank(row);
-        const name = getName(row) || "Player";
-        const value = getValue(row);
-        const isMe = highlightTid && Number(row.telegram_id) === Number(highlightTid);
-        html += `
-          <div style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            padding:10px 12px;
-            margin-bottom:8px;
-            border-radius:12px;
-            background:${isMe ? "rgba(251,191,36,0.15)" : "rgba(15,23,42,0.9)"};
-            border:${isMe ? "1px solid rgba(251,191,36,0.8)" : "1px solid rgba(15,23,42,0.9)"};
-            font-size:13px;
-          ">
-            <div>
-              <div style="font-weight:600;">#${formatNumber(rank)} · ${name}</div>
-            </div>
-            <div style="text-align:right; font-variant-numeric:tabular-nums;">
-              <div>${formatNumber(value)} pts</div>
-            </div>
-          </div>
-        `;
-      }
-      lbContent.innerHTML = html;
-    }
-
-    function loadGlobalLeaderboard() {
+function loadFriendsLeaderboard() {
+  lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Loading friends leaderboard…</div>';
+  apiPost("/api/leaderboard/friends", {}).then((res) => {
+    if (!res || !res.ok) {
+      lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Error loading friends leaderboard.</div>';
+      renderMySummary("Friends rank", null, null);
       lbOvertakeBanner.style.display = "none";
       lbOvertakeBanner.innerHTML = "";
       lbFooterInvite.style.display = "block";
-      lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Loading global leaderboard…</div>';
-      apiPost("/api/leaderboard/global", {}).then((res) => {
-        if (!res || !res.ok) {
-          lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Error loading leaderboard.</div>';
-          renderMySummary("Global rank", null, null);
-          return;
-        }
-        const me = res.me || {};
-        renderMySummary("Global rank", me.global_rank, me.global_total);
-        renderList(
-          res.global || [],
-          (row) => row.global_rank,
-          (row) => row.username || row.first_name || row.last_name,
-          (row) => row.balance || 0,
-          me.telegram_id
-        );
-      });
+      return;
     }
+    const me = res.me || {};
+    renderMySummary("Friends rank", me.friend_rank, (res.friends || []).length);
 
-    function loadDailyLeaderboard() {
+    if (res.overtake && res.overtake.target_display_name && typeof res.overtake.need_points === "number") {
+      lbOvertakeBanner.style.display = "block";
+      lbOvertakeBanner.innerHTML = `
+        <div style="
+          border-radius:16px;
+          padding:10px 12px;
+          background:linear-gradient(90deg,#fbbf24,#fb923c);
+          color:#111827;
+          font-size:13px;
+          font-weight:600;
+          text-align:left;
+          margin-bottom:4px;
+        ">
+          ⭐ Overtake ${res.overtake.target_display_name} by +${formatNumber(res.overtake.need_points)} pts
+        </div>
+      `;
+    } else {
       lbOvertakeBanner.style.display = "none";
       lbOvertakeBanner.innerHTML = "";
-      lbFooterInvite.style.display = "block";
-      lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Loading daily ranks…</div>';
-      apiPost("/api/leaderboard/daily", {}).then((res) => {
-        if (!res || !res.ok) {
-          lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Error loading daily leaderboard.</div>';
-          renderMySummary("Daily rank", null, null);
-          return;
-        }
-        const me = res.me || {};
-        renderMySummary("Daily rank", me.daily_rank, me.daily_total);
-        renderList(
-          res.daily || [],
-          (row) => row.daily_rank,
-          (row) => row.username || row.first_name || row.last_name,
-          (row) => row.today_farmed || 0,
-          me.telegram_id
-        );
-      });
     }
 
-    function loadFriendsLeaderboard() {
-      lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Loading friends leaderboard…</div>';
-      apiPost("/api/leaderboard/friends", {}).then((res) => {
-        if (!res || !res.ok) {
-          lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Error loading friends leaderboard.</div>';
-          renderMySummary("Friends rank", null, null);
-          lbOvertakeBanner.style.display = "none";
-          lbOvertakeBanner.innerHTML = "";
-          lbFooterInvite.style.display = "block";
-          return;
-        }
-        const me = res.me || {};
-        renderMySummary("Friends rank", me.friend_rank, (res.friends || []).length);
+    lbFooterInvite.style.display = "block";
+    renderList(
+      res.friends || [],
+      (row) => row.friend_rank,
+      (row) => row.username || row.first_name || row.last_name,
+      (row) => row.balance || 0,
+      me.telegram_id
+    );
+  });
+}
 
-        // Overtake banner
-        if (res.overtake && res.overtake.target_display_name && typeof res.overtake.need_points === "number") {
-          lbOvertakeBanner.style.display = "block";
-          lbOvertakeBanner.innerHTML = `
-            <div style="
-              border-radius:16px;
-              padding:10px 12px;
-              background:linear-gradient(90deg,#fbbf24,#fb923c);
-              color:#111827;
-              font-size:13px;
-              font-weight:600;
-              text-align:left;
-              margin-bottom:4px;
-            ">
-              ⭐ Overtake ${res.overtake.target_display_name} by +${formatNumber(res.overtake.need_points)} pts
-            </div>
-          `;
-        } else {
-          lbOvertakeBanner.style.display = "none";
-          lbOvertakeBanner.innerHTML = "";
-        }
+lbTabGlobal.addEventListener("click", () => {
+  setLeaderboardTabActive("global");
+  loadGlobalLeaderboard();
+});
 
-        lbFooterInvite.style.display = "block";
-        renderList(
-          res.friends || [],
-          (row) => row.friend_rank,
-          (row) => row.username || row.first_name || row.last_name,
-          (row) => row.balance || 0,
-          me.telegram_id
-        );
-      });
-    }
+lbTabDaily.addEventListener("click", () => {
+  setLeaderboardTabActive("daily");
+  loadDailyLeaderboard();
+});
 
-    lbTabGlobal.addEventListener("click", () => {
-      setLeaderboardTabActive("global");
-      loadGlobalLeaderboard();
-    });
+lbTabFriends.addEventListener("click", () => {
+  setLeaderboardTabActive("friends");
+  loadFriendsLeaderboard();
+});
 
-    lbTabDaily.addEventListener("click", () => {
-      setLeaderboardTabActive("daily");
-      loadDailyLeaderboard();
-    });
+// Init
+loadStateLocal();
+render();
+initFromBackend();
 
-    lbTabFriends.addEventListener("click", () => {
-      setLeaderboardTabActive("friends");
-      loadFriendsLeaderboard();
-    });
-
-    // Init
-    loadStateLocal();
+// Auto-refresh from backend (energy, rank, etc.)
+setInterval(async () => {
+  const res = await apiPost("/api/state", {});
+  if (res && res.ok) {
+    applyBackendState(res);
     render();
-    initFromBackend();
-
-    // 🔁 Auto-refresh from backend so energy & rank update over time
-    setInterval(async () => {
-      const res = await apiPost("/api/state", {});
-      if (res && res.ok) {
-        applyBackendState(res);
-        render();
-      }
-    }, 15000); // every 15 seconds
+  }
+}, 15000);
   </script>
 </body>
 </html>

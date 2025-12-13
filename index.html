@@ -2045,15 +2045,47 @@ async function handleEnergyBoostTask() {
   }
 
   const hasPoints = (state.bal || 0) >= ENERGY_REFILL_COST_CLIENT;
+
+  // IMPORTANT UX:
+  // - OK = spend points
+  // - Cancel = sponsor action (free)
+  const ok = window.confirm(
+    `Refill energy now?
+
+OK = spend ${ENERGY_REFILL_COST_CLIENT.toLocaleString("en-GB")} points
+Cancel = complete a sponsor action`
+  );
+
+  // CANCEL → sponsor action path
+  if (!ok) {
+    // If you later plug a real offerwall/rewarded-ad flow, trigger it here,
+    // and only call the backend after the sponsor action confirms completion.
+    const res = await apiPost("/api/boost/energy", { method: "action" });
+
+    if (!res) return;
+
+    if (!res.ok) {
+      if (res.reason === "ENERGY_FULL") {
+        showToast("Your energy is already full.");
+      } else if (res.reason !== "NO_TELEGRAM_ID") {
+        showToast("Sponsor refill failed – try again.");
+      }
+      return;
+    }
+
+    applyBackendState(res);
+    render();
+    updateTaskCardStates();
+
+    showToast(res.message || "⚡ Sponsor action complete – energy refilled!");
+    return;
+  }
+
+  // OK → points path
   if (!hasPoints) {
     showToast(`Need ${ENERGY_REFILL_COST_CLIENT.toLocaleString("en-GB")} points to refill.`);
     return;
   }
-
-  const ok = window.confirm(
-    `Spend ${ENERGY_REFILL_COST_CLIENT.toLocaleString("en-GB")} points to refill energy now?`
-  );
-  if (!ok) return;
 
   const res = await apiPost("/api/boost/energy", { method: "points" });
 

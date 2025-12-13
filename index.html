@@ -1312,11 +1312,11 @@
 
           <div
             class="task-card"
-            data-code="pro_quest"
+            data-code="sponsor_quests"
             data-reward="0"
           >
             <div class="task-top">
-              <div class="task-title">Pro quests (soon)</div>
+              <div class="task-title">Sponsor quests</div>
               <div class="task-reward">🚧</div>
             </div>
             <div class="task-desc">
@@ -1476,7 +1476,28 @@
   </div>
 
   <!-- SCRIPT STARTS IN PART 2 -->
-  <script>
+  
+  <div class="sheet" id="sponsorSheet">
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Sponsor quests</div>
+        <div class="sheet-subtitle">Complete partner tasks to earn points and unlock boosts.</div>
+      </div>
+      <button class="sheet-close" id="sponsorClose">✕</button>
+    </div>
+
+    <div class="sheet-body">
+      <div id="sponsorList" class="vip-box" style="margin-bottom:12px;">
+        <div style="opacity:.8;">Loading sponsor quests…</div>
+      </div>
+
+      <div class="vip-box" style="opacity:.8;">
+        Tip: If a quest sends you to a partner site, come back here and tap <b>Claim</b>.
+      </div>
+    </div>
+  </div>
+
+<script>
 const tg =
   window.Telegram && window.Telegram.WebApp
     ? window.Telegram.WebApp
@@ -1571,14 +1592,18 @@ const sheetBackdrop = document.getElementById("sheetBackdrop");
 const friendsSheet = document.getElementById("friendsSheet");
 const withdrawSheet = document.getElementById("withdrawSheet");
 const vipSheet = document.getElementById("vipSheet");
+const sponsorSheet = document.getElementById("sponsorSheet");
 const friendsClose = document.getElementById("friendsClose");
 const withdrawClose = document.getElementById("withdrawClose");
 const vipClose = document.getElementById("vipClose");
+const sponsorClose = document.getElementById("sponsorClose");
 
 const vipStatusText = document.getElementById("vipStatusText");
 const vipPerksText = document.getElementById("vipPerksText");
 const vipBuyBtn = document.getElementById("vipBuyBtn");
 const vipPacksBtn = document.getElementById("vipPacksBtn");
+
+const sponsorList = document.getElementById("sponsorList");
 
 const friendsJoinedText = document.getElementById("friendsJoinedText");
 const referralPointsText = document.getElementById("referralPointsText");
@@ -2044,7 +2069,143 @@ function openVipSheet() {
 
 function closeVipSheet() {
   vipSheet.classList.remove("show");
+  sponsorSheet.classList.remove("show");
   sheetBackdrop.classList.remove("show");
+}
+
+
+function openSponsorSheet() {
+  sheetBackdrop.classList.add("show");
+  sponsorSheet.classList.add("show");
+  setActiveTab(tabTasks);
+}
+
+function closeSponsorSheet() {
+  sponsorSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+  setActiveTab(tabFarm);
+}
+
+function fmtPayout(m) {
+  const amt = Number(m.payout_amount || 0);
+  if (!amt) return "";
+  if (m.payout_type === "points") return `+${amt.toLocaleString("en-GB")} pts`;
+  return `+${amt.toLocaleString("en-GB")}`;
+}
+
+function renderSponsorMissions(missions) {
+  if (!Array.isArray(missions) || missions.length === 0) {
+    sponsorList.innerHTML =
+      '<div style="opacity:.85;">No sponsor quests available right now. Check back soon.</div>';
+    return;
+  }
+
+  sponsorList.innerHTML = missions
+    .map((m) => {
+      const payout = fmtPayout(m);
+      const status = m.status || "not_started";
+      const completed = status === "completed" || m.reward_applied;
+
+      let btnText = "Start";
+      let btnDisabled = "";
+      let btnAction = "start";
+      if (completed) {
+        btnText = "Completed";
+        btnDisabled = "disabled";
+        btnAction = "none";
+      } else if (status === "started") {
+        btnText = "Claim";
+        btnAction = "claim";
+      }
+
+      return `
+        <div class="withdraw-row" style="align-items:flex-start; gap:12px;">
+          <div style="flex:1;">
+            <div style="font-weight:700; margin-bottom:4px;">${m.title || m.code}</div>
+            <div style="opacity:.85; font-size:12px; line-height:1.3;">${m.description || ""}</div>
+            <div style="margin-top:6px; font-size:12px; opacity:.85;">${payout ? payout : ""}</div>
+          </div>
+          <button class="btn small" data-mcode="${m.code}" data-action="${btnAction}" ${btnDisabled}>
+            ${btnText}
+          </button>
+        </div>
+      `;
+    })
+    .join("");
+
+  sponsorList.querySelectorAll("button[data-mcode]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const code = btn.getAttribute("data-mcode");
+      const action = btn.getAttribute("data-action");
+      if (!code || action === "none") return;
+
+      if (action === "start") {
+        const res = await apiPost("/api/mission/start", { code });
+        if (!res || !res.ok) {
+          showToast("Could not start quest.");
+          return;
+        }
+        if (res.redirect_url) {
+          window.open(res.redirect_url, "_blank");
+        }
+        // optimistic UI: mark as started
+        const updated = (window.__sponsorMissions || []).map((m) =>
+          m.code === code ? { ...m, status: "started" } : m
+        );
+        window.__sponsorMissions = updated;
+        renderSponsorMissions(updated);
+        showToast("Quest started. Come back to claim.");
+        return;
+      }
+
+      if (action === "claim") {
+        const res = await apiPost("/api/mission/complete", { code });
+        if (!res || !res.ok) {
+          showToast("Could not claim reward.");
+          return;
+        }
+        applyBackendState(res);
+        render();
+
+        // refresh list from backend after claim
+        await loadSponsorMissions(true);
+        showToast("Reward claimed!");
+      }
+    });
+  });
+}
+
+async function loadSponsorMissions(forceRefresh = false) {
+  if (!forceRefresh && Array.isArray(window.__sponsorMissions)) {
+    renderSponsorMissions(window.__sponsorMissions);
+    return window.__sponsorMissions;
+  }
+
+  let res = await apiPost("/api/mission/list", { kind: "sponsor" });
+  if (!res || !res.ok || !Array.isArray(res.missions) || res.missions.length === 0) {
+    res = await apiPost("/api/mission/list", {});
+  }
+  let missions = (res && Array.isArray(res.missions)) ? res.missions : [];
+
+  // Prefer sponsor-like kinds if present
+  const hasKinds = missions.some((m) => m.kind);
+  if (hasKinds) {
+    const preferred = missions.filter((m) => {
+      const k = String(m.kind || "").toLowerCase();
+      return k.includes("sponsor") || k.includes("partner") || k.includes("offer");
+    });
+    if (preferred.length) missions = preferred;
+  }
+
+  window.__sponsorMissions = missions;
+  renderSponsorMissions(missions);
+  return missions;
+}
+
+async function handleSponsorQuests() {
+  openSponsorSheet();
+  await loadSponsorMissions(true);
 }
 
 async function refreshVipStatus() {
@@ -2255,10 +2416,6 @@ async function handleDoubleBoostTask() {
   showToast(res.message || "✨ Double points boost activated!");
 }
 
-function handleProQuest() {
-  showToast("Pro quests are coming soon.");
-}
-
 // Task click router (includes double_boost)
 document.querySelectorAll(".task-card").forEach((card) => {
   card.addEventListener("click", () => {
@@ -2303,8 +2460,8 @@ document.querySelectorAll(".task-card").forEach((card) => {
       handleDoubleBoostTask();
     } else if (code === "boost_energy") {
       handleEnergyBoostTask();
-    } else if (code === "pro_quest") {
-      handleProQuest();
+    } else if (code === "sponsor_quests") {
+      handleSponsorQuests();
     }
   });
 });
@@ -2374,6 +2531,7 @@ sheetBackdrop.addEventListener("click", () => {
   friendsSheet.classList.remove("show");
   withdrawSheet.classList.remove("show");
   vipSheet.classList.remove("show");
+  sponsorSheet.classList.remove("show");
   sheetBackdrop.classList.remove("show");
   setActiveTab(tabFarm);
 });

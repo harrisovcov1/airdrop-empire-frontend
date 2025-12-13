@@ -1605,8 +1605,6 @@ const vipPacksBtn = document.getElementById("vipPacksBtn");
 
 const sponsorList = document.getElementById("sponsorList");
 
-let sponsorTicker = null;
-
 const friendsJoinedText = document.getElementById("friendsJoinedText");
 const referralPointsText = document.getElementById("referralPointsText");
 const inviteLinkText = document.getElementById("inviteLinkText");
@@ -2075,46 +2073,22 @@ function closeVipSheet() {
   sheetBackdrop.classList.remove("show");
 }
 
-function stopSponsorTicker() {
-  if (sponsorTicker) {
-    clearInterval(sponsorTicker);
-    sponsorTicker = null;
-  }
-}
-
-function startSponsorTicker() {
-  stopSponsorTicker();
-  sponsorTicker = setInterval(() => {
-    // Update any cooldown buttons in-place (no refetch needed)
-    document.querySelectorAll("button[data-cooldown-until]").forEach((btn) => {
-      const untilIso = btn.getAttribute("data-cooldown-until");
-      if (!untilIso) return;
-      const untilMs = Date.parse(untilIso);
-      if (Number.isNaN(untilMs)) return;
-      const rem = Math.max(0, untilMs - Date.now());
-      if (rem <= 0) {
-        // Force refresh so it becomes Start again
-        loadSponsorMissions(true);
-        return;
-      }
-      btn.textContent = `Claim in ${msToCountdown(rem)}`;
-    });
-  }, 1000);
-}
-
 
 function openSponsorSheet() {
   sheetBackdrop.classList.add("show");
   sponsorSheet.classList.add("show");
   setActiveTab(tabTasks);
-  startSponsorTicker();
 }
 
 function closeSponsorSheet() {
-  stopSponsorTicker();
   sponsorSheet.classList.remove("show");
   sheetBackdrop.classList.remove("show");
   setActiveTab(tabFarm);
+
+  if (window.__sponsorCountdownTick) {
+    clearInterval(window.__sponsorCountdownTick);
+    window.__sponsorCountdownTick = null;
+  }
 }
 
 function fmtPayout(m) {
@@ -2125,6 +2099,12 @@ function fmtPayout(m) {
 }
 
 function renderSponsorMissions(missions) {
+  // clear any existing countdown tick
+  if (window.__sponsorCountdownTick) {
+    clearInterval(window.__sponsorCountdownTick);
+    window.__sponsorCountdownTick = null;
+  }
+
   if (!Array.isArray(missions) || missions.length === 0) {
     sponsorList.innerHTML =
       '<div style="opacity:.85;">No sponsor quests available right now. Check back soon.</div>';
@@ -2135,19 +2115,14 @@ function renderSponsorMissions(missions) {
     .map((m) => {
       const payout = fmtPayout(m);
       const status = m.status || "not_started";
-      const cooldownSeconds = Number(m.cooldown_seconds || 0);
-      const inCooldown = status === "cooldown" || cooldownSeconds > 0;
-      const completed = !inCooldown && (status === "completed" || m.reward_applied);
+      const remaining = Number(m.cooldown_remaining_seconds || 0);
 
       let btnText = "Start";
       let btnDisabled = "";
       let btnAction = "start";
-      if (inCooldown) {
-        btnText = `Claim in ${msToCountdown(cooldownSeconds * 1000)}`;
-        btnDisabled = "disabled";
-        btnAction = "none";
-      } else if (completed) {
-        btnText = "Completed";
+
+      if (remaining > 0 || status === "cooldown") {
+        btnText = `Claim in ${msToCountdown(remaining * 1000)}`;
         btnDisabled = "disabled";
         btnAction = "none";
       } else if (status === "started") {
@@ -2161,9 +2136,8 @@ function renderSponsorMissions(missions) {
             <div style="font-weight:700; margin-bottom:4px;">${m.title || m.code}</div>
             <div style="opacity:.85; font-size:12px; line-height:1.3;">${m.description || ""}</div>
             <div style="margin-top:6px; font-size:12px; opacity:.85;">${payout ? payout : ""}</div>
-            ${inCooldown ? `<div style="margin-top:4px; font-size:12px; opacity:.75;">Available again in ${msToCountdown(cooldownSeconds * 1000)}</div>` : ""}
           </div>
-          <button class="btn small" data-mcode="${m.code}" data-action="${btnAction}" ${btnDisabled} ${inCooldown && m.cooldown_until ? `data-cooldown-until="${m.cooldown_until}"` : ""}>
+          <button class="btn small" data-mcode="${m.code}" data-action="${btnAction}" data-remaining="${remaining}" ${btnDisabled}>
             ${btnText}
           </button>
         </div>
@@ -2181,11 +2155,12 @@ function renderSponsorMissions(missions) {
       if (action === "start") {
         const res = await apiPost("/api/mission/start", { code });
         if (!res || !res.ok) {
-          if (res && res.error === "MISSION_COOLDOWN" && res.cooldown_seconds) {
-            showToast(`Available in ${msToCountdown(Number(res.cooldown_seconds) * 1000)}`);
-          } else {
-            showToast("Could not start quest.");
+          if (res && res.error === "MISSION_COOLDOWN") {
+            showToast(`Available in ${msToCountdown(Number(res.cooldown_remaining_seconds || 0) * 1000)}`);
+            await loadSponsorMissions(true);
+            return;
           }
+          showToast("Could not start quest.");
           return;
         }
         if (res.redirect_url) {
@@ -2204,22 +2179,43 @@ function renderSponsorMissions(missions) {
       if (action === "claim") {
         const res = await apiPost("/api/mission/complete", { code });
         if (!res || !res.ok) {
-          if (res && res.error === "MISSION_COOLDOWN" && res.cooldown_seconds) {
-            showToast(`Available in ${msToCountdown(Number(res.cooldown_seconds) * 1000)}`);
-          } else {
-            showToast("Could not claim reward.");
+          if (res && res.error === "MISSION_COOLDOWN") {
+            showToast(`Available in ${msToCountdown(Number(res.cooldown_remaining_seconds || 0) * 1000)}`);
+            await loadSponsorMissions(true);
+            return;
           }
+          showToast("Could not claim reward.");
           return;
         }
         applyBackendState(res);
         render();
 
-        // refresh list from backend after claim
+        // refresh list from backend after claim (will include cooldown)
         await loadSponsorMissions(true);
         showToast("Reward claimed!");
       }
     });
   });
+
+  // Live countdown tick for cooldown buttons
+  window.__sponsorCountdownTick = setInterval(async () => {
+    let anyExpired = false;
+    sponsorList.querySelectorAll("button[data-remaining]").forEach((b) => {
+      const rem = Number(b.getAttribute("data-remaining") || 0);
+      if (rem > 0) {
+        const next = rem - 1;
+        b.setAttribute("data-remaining", String(next));
+        if (next > 0) {
+          b.textContent = `Claim in ${msToCountdown(next * 1000)}`;
+        } else {
+          anyExpired = true;
+        }
+      }
+    });
+    if (anyExpired) {
+      await loadSponsorMissions(true);
+    }
+  }, 1000);
 }
 
 async function loadSponsorMissions(forceRefresh = false) {
@@ -2553,12 +2549,6 @@ withdrawClose.addEventListener("click", () => {
 
 vipClose.addEventListener("click", () => {
   closeVipSheet();
-  setActiveTab(tabFarm);
-});
-
-sponsorClose.addEventListener("click", () => {
-  sponsorSheet.classList.remove("show");
-  sheetBackdrop.classList.remove("show");
   setActiveTab(tabFarm);
 });
 

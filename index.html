@@ -1240,6 +1240,7 @@
         <div class="tasks-grid">
           <div
             class="task-card"
+            data-code="pro_quest"
             data-code="daily"
             data-reward="500"
           >
@@ -1254,7 +1255,7 @@
 
           <div
             class="task-card"
-            data-code="join_tg"
+            data-code="instagram_follow"
             data-reward="1000"
           >
             <div class="task-top">
@@ -1336,8 +1337,8 @@
           <span>Tasks</span>
         </button>
         <button class="nav-btn" id="tabFriends">
-          <div class="nav-icon">👥</div>
-          <span>Friends</span>
+          <div class="nav-icon">🏆</div>
+          <span>Leaderboard</span>
         </button>
         <button class="nav-btn" id="tabWithdraw">
           <div class="nav-icon">💳</div>
@@ -1780,12 +1781,22 @@ function updateTaskCardStates() {
 
   // Instagram one-time claim (UI only; backend should enforce later)
   const igClaimedAt = getStoredMs(INSTAGRAM_CLAIM_AT_KEY);
-  const igCard = document.querySelector('.task-card[data-code="join_tg"]');
+  const igCard = document.querySelector('.task-card[data-code="instagram_follow"]');
   if (igCard) {
     if (igClaimedAt) {
       igCard.classList.add("task-disabled");
     } else {
       igCard.classList.remove("task-disabled");
+    }
+  }
+
+  // LOCAL_DOUBLE_EXPIRY: ensure UI turns off when boost time passes even if user doesn't refresh
+  if (state.doubleBoostUntil) {
+    const untilMs = Date.parse(state.doubleBoostUntil);
+    if (!isNaN(untilMs) && Date.now() > untilMs) {
+      state.doubleBoostActive = false;
+      state.doubleBoostUntil = null;
+      saveStateLocal(state);
     }
   }
 
@@ -2132,7 +2143,7 @@ document.querySelectorAll(".task-card").forEach((card) => {
 
     if (code === "daily") {
       handleDailyTask(reward);
-    } else if (code === "join_tg") {
+    } else if (code === "instagram_follow") {
       handleInstagramTask(reward);
     } else if (code === "invite_friend") {
       handleInviteTask();

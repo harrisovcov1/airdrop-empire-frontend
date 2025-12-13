@@ -1254,15 +1254,15 @@
 
           <div
             class="task-card"
-            data-code="instagram_follow"
-            data-reward="1000"
+            data-code="vip_premium"
+            data-reward="0"
           >
             <div class="task-top">
-              <div class="task-title">Follow on Instagram</div>
-              <div class="task-reward">+1,000 🌕</div>
+              <div class="task-title">VIP / Premium</div>
+              <div class="task-reward">⭐</div>
             </div>
             <div class="task-desc">
-              Tap to follow the official Airdrop Empire Instagram for alpha drops.
+              Unlock Premium boosts, VIP perks & exclusive drops. Subscriptions and packs.
             </div>
           </div>
 
@@ -1437,6 +1437,39 @@
     </div>
   </div>
 
+  <div class="sheet" id="vipSheet">
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">VIP · Premium</div>
+        <div class="sheet-subtitle">
+          Activate VIP and premium packs. Built for maximum farming.
+        </div>
+      </div>
+      <button class="sheet-close" id="vipClose">×</button>
+    </div>
+    <div class="sheet-body">
+      <div class="withdraw-card" style="margin-bottom: 12px">
+        <div class="withdraw-row">
+          <div>
+            <div style="font-size: 11px; color: rgba(148, 163, 184, 0.95)">
+              VIP status
+            </div>
+            <div class="withdraw-amount" id="vipStatusText">Checking…</div>
+          </div>
+          <div class="balance-token-icon"><span>⭐</span></div>
+        </div>
+        <div class="withdraw-sub" id="vipPerksText">
+          VIP Pass: 30 days · VIP badge · future perk drops.
+        </div>
+      </div>
+
+      <button class="friends-share-btn" id="vipBuyBtn">Buy VIP Pass (30 days)</button>
+      <button class="withdraw-bottom-btn" id="vipPacksBtn" disabled>
+        Premium packs (coming soon)
+      </button>
+    </div>
+  </div>
+
   <div class="toast" id="toast">
     <span class="toast-icon">✨</span>
     <span id="toastText">Saved</span>
@@ -1537,8 +1570,15 @@ const tabWithdraw = document.getElementById("tabWithdraw");
 const sheetBackdrop = document.getElementById("sheetBackdrop");
 const friendsSheet = document.getElementById("friendsSheet");
 const withdrawSheet = document.getElementById("withdrawSheet");
+const vipSheet = document.getElementById("vipSheet");
 const friendsClose = document.getElementById("friendsClose");
 const withdrawClose = document.getElementById("withdrawClose");
+const vipClose = document.getElementById("vipClose");
+
+const vipStatusText = document.getElementById("vipStatusText");
+const vipPerksText = document.getElementById("vipPerksText");
+const vipBuyBtn = document.getElementById("vipBuyBtn");
+const vipPacksBtn = document.getElementById("vipPacksBtn");
 
 const friendsJoinedText = document.getElementById("friendsJoinedText");
 const referralPointsText = document.getElementById("referralPointsText");
@@ -1778,16 +1818,7 @@ function updateTaskCardStates() {
     }
   }
 
-  // Instagram one-time claim (UI only; backend should enforce later)
-  const igClaimedAt = getStoredMs(INSTAGRAM_CLAIM_AT_KEY);
-  const igCard = document.querySelector('.task-card[data-code="instagram_follow"]');
-  if (igCard) {
-    if (igClaimedAt) {
-      igCard.classList.add("task-disabled");
-    } else {
-      igCard.classList.remove("task-disabled");
-    }
-  }
+  // VIP/Premium card is always available (no client-side disable)
 
   // LOCAL_DOUBLE_EXPIRY: ensure UI turns off when boost time passes even if user doesn't refresh
   if (state.doubleBoostUntil) {
@@ -2002,36 +2033,79 @@ async function handleDailyTask(reward) {
   showToast(`+${reward.toLocaleString("en-GB")} daily bonus added`);
 }
 
-async function handleInstagramTask(reward) {
-  const claimedAt = getStoredMs(INSTAGRAM_CLAIM_AT_KEY);
-  if (claimedAt) {
-    window.open("https://www.instagram.com/airdropempireapp/", "_blank");
-    showToast("Instagram boost already claimed.");
-    updateTaskCardStates();
+// ⭐ VIP / Premium hub
+const VIP_PASS_COST = 25000; // keep in sync with backend
+
+function openVipSheet() {
+  sheetBackdrop.classList.add("show");
+  vipSheet.classList.add("show");
+  setActiveTab(tabTasks);
+}
+
+function closeVipSheet() {
+  vipSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+}
+
+async function refreshVipStatus() {
+  vipStatusText.textContent = "Checking…";
+  vipBuyBtn.disabled = true;
+
+  const res = await apiPost("/api/vip/status", {});
+  if (!res || !res.ok) {
+    vipStatusText.textContent = "Unavailable";
+    vipBuyBtn.disabled = false;
     return;
   }
 
-  // Always open the link (user action), but do NOT grant points locally.
-  window.open("https://www.instagram.com/airdropempireapp/", "_blank");
+  if (res.vip_active) {
+    const untilMs = Date.parse(res.vip_until);
+    const remaining = isNaN(untilMs) ? 0 : Math.max(0, untilMs - Date.now());
+    vipStatusText.textContent = remaining > 0 ? `Active · ${msToCountdown(remaining)}` : "Active";
+    vipPerksText.textContent = "VIP Pass active · VIP badge · future perk drops.";
+    vipBuyBtn.textContent = "VIP is active";
+    vipBuyBtn.disabled = true;
+  } else {
+    vipStatusText.textContent = "Inactive";
+    vipPerksText.textContent = `VIP Pass: 30 days · VIP badge · future perk drops. Cost: ${VIP_PASS_COST.toLocaleString("en-GB")} points.`;
+    vipBuyBtn.textContent = `Buy VIP Pass (30 days) · ${VIP_PASS_COST.toLocaleString("en-GB")} pts`;
+    vipBuyBtn.disabled = false;
+  }
+}
 
-  const res = await apiPost("/api/task", { taskName: "instagram_follow", reward });
+async function handleVipPremium() {
+  openVipSheet();
+  await refreshVipStatus();
+}
 
+async function buyVipPass() {
+  const hasPoints = (state.bal || 0) >= VIP_PASS_COST;
+  if (!hasPoints) {
+    showToast(`Need ${VIP_PASS_COST.toLocaleString("en-GB")} points for VIP.`);
+    return;
+  }
+
+  const ok = window.confirm(
+    `Activate VIP Pass for 30 days?\n\nThis will spend ${VIP_PASS_COST.toLocaleString("en-GB")} points.`
+  );
+  if (!ok) return;
+
+  const res = await apiPost("/api/vip/buy", { tier: "vip_pass_30d", method: "points" });
   if (!res) return;
 
   if (!res.ok) {
-    if (res.reason !== "NO_TELEGRAM_ID") {
-      showToast("Instagram bonus already claimed or error.");
+    if (res.reason === "NOT_ENOUGH_POINTS") {
+      showToast("Not enough points for VIP.");
+    } else if (res.reason !== "NO_TELEGRAM_ID") {
+      showToast("VIP purchase failed – try again.");
     }
     return;
   }
 
-  setStoredMs(INSTAGRAM_CLAIM_AT_KEY, Date.now());
-
   applyBackendState(res);
   render();
-  updateTaskCardStates();
-
-  showToast(`+${reward.toLocaleString("en-GB")} Instagram bonus`);
+  await refreshVipStatus();
+  showToast(res.message || "⭐ VIP activated!");
 }
 
 async function handleInviteTask() {
@@ -2221,8 +2295,8 @@ document.querySelectorAll(".task-card").forEach((card) => {
 
     if (code === "daily") {
       handleDailyTask(reward);
-    } else if (code === "instagram_follow") {
-      handleInstagramTask(reward);
+    } else if (code === "vip_premium") {
+      handleVipPremium();
     } else if (code === "invite_friend") {
       handleInviteTask();
     } else if (code === "double_boost") {
@@ -2287,9 +2361,19 @@ withdrawClose.addEventListener("click", () => {
   setActiveTab(tabFarm);
 });
 
+vipClose.addEventListener("click", () => {
+  closeVipSheet();
+  setActiveTab(tabFarm);
+});
+
+vipBuyBtn.addEventListener("click", () => {
+  buyVipPass();
+});
+
 sheetBackdrop.addEventListener("click", () => {
   friendsSheet.classList.remove("show");
   withdrawSheet.classList.remove("show");
+  vipSheet.classList.remove("show");
   sheetBackdrop.classList.remove("show");
   setActiveTab(tabFarm);
 });

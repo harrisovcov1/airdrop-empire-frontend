@@ -1803,7 +1803,15 @@ function updateTaskCardStates() {
   const doubleCard = document.querySelector('.task-card[data-code="double_boost"]');
   if (doubleCard && doubleBoostRewardTextEl) {
     if (state.doubleBoostActive) {
-      doubleBoostRewardTextEl.textContent = "Active ✨";
+      // Show countdown while active (10 mins)
+      let remainingMs = 0;
+      if (state.doubleBoostUntil) {
+        const untilMs = Date.parse(state.doubleBoostUntil);
+        if (!isNaN(untilMs)) remainingMs = Math.max(0, untilMs - Date.now());
+      }
+
+      doubleBoostRewardTextEl.textContent =
+        remainingMs > 0 ? `Active · ${msToCountdown(remainingMs)}` : "Active ✨";
       doubleCard.classList.add("task-disabled");
     } else {
       doubleBoostRewardTextEl.textContent = "x2 · 10 mins";
@@ -2118,15 +2126,40 @@ async function handleDoubleBoostTask() {
   }
 
   const hasPoints = (state.bal || 0) >= DOUBLE_BOOST_COST_CLIENT;
+
+  // Cancel → sponsor action (free), OK → spend points
+  const ok = window.confirm(
+    `Activate x2 taps for 10 minutes?\n\n` +
+      `Press OK to spend ${DOUBLE_BOOST_COST_CLIENT.toLocaleString("en-GB")} points.\n` +
+      `Press Cancel to complete a sponsor action (free).`
+  );
+
+  if (!ok) {
+    // Sponsor action path
+    const res = await apiPost("/api/boost/double", { method: "action" });
+
+    if (!res) return;
+
+    if (!res.ok) {
+      if (res.reason !== "NO_TELEGRAM_ID") {
+        showToast("Sponsor boost failed – try again.");
+      }
+      return;
+    }
+
+    applyBackendState(res);
+    render();
+    updateTaskCardStates();
+
+    showToast(res.message || "✨ Sponsor action complete – double points activated!");
+    return;
+  }
+
+  // Points path
   if (!hasPoints) {
     showToast(`Need ${DOUBLE_BOOST_COST_CLIENT.toLocaleString("en-GB")} points for double boost.`);
     return;
   }
-
-  const ok = window.confirm(
-    `Spend ${DOUBLE_BOOST_COST_CLIENT.toLocaleString("en-GB")} points for 10 minutes of x2 taps?`
-  );
-  if (!ok) return;
 
   const res = await apiPost("/api/boost/double", { method: "points" });
 

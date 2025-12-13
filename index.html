@@ -1240,7 +1240,6 @@
         <div class="tasks-grid">
           <div
             class="task-card"
-            data-code="pro_quest"
             data-code="daily"
             data-reward="500"
           >
@@ -1955,13 +1954,27 @@ async function handleDailyTask(reward) {
 
   if (!res.ok) {
     if (res.reason !== "NO_TELEGRAM_ID") {
-      // If backend has its own cooldown reason, surface it
-      if (res.nextAt) {
-        const nextAt = new Date(res.nextAt).getTime();
-        if (Number.isFinite(nextAt)) {
-          const remaining2 = Math.max(0, nextAt - Date.now());
-          showToast(`Daily already claimed. Try again in ${msToCountdown(remaining2)}.`);
-          setStoredMs(DAILY_CLAIM_AT_KEY, Date.now()); // lock UI for the day
+      // If backend sends cooldown info, sync UI cooldown to match
+      const remainingSec = Number(res.next_claim_in_seconds || 0);
+      const nextAtIso = res.next_claim_at || null;
+
+      if (Number.isFinite(remainingSec) && remainingSec > 0) {
+        const remainingMs = remainingSec * 1000;
+        // Back-calculate an accurate "claimed at" so the local 24h timer matches the server
+        const claimedAt = Date.now() - (DAILY_COOLDOWN_MS - remainingMs);
+        setStoredMs(DAILY_CLAIM_AT_KEY, claimedAt);
+        showToast(`Daily already claimed. Try again in ${msToCountdown(remainingMs)}.`);
+        updateTaskCardStates();
+        return;
+      }
+
+      if (nextAtIso) {
+        const nextAtMs = Date.parse(nextAtIso);
+        if (!isNaN(nextAtMs)) {
+          const remainingMs2 = Math.max(0, nextAtMs - Date.now());
+          const claimedAt2 = Date.now() - (DAILY_COOLDOWN_MS - remainingMs2);
+          setStoredMs(DAILY_CLAIM_AT_KEY, claimedAt2);
+          showToast(`Daily already claimed. Try again in ${msToCountdown(remainingMs2)}.`);
           updateTaskCardStates();
           return;
         }
@@ -2549,6 +2562,11 @@ lbTabFriends.addEventListener("click", () => {
 loadStateLocal();
 render();
 initFromBackend();
+
+// Keep countdown labels/timers fresh without needing a refresh
+setInterval(() => {
+  updateTaskCardStates();
+}, 1000);
 
 // Auto-refresh from backend (energy, rank, etc.)
 setInterval(async () => {

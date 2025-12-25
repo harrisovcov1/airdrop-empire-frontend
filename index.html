@@ -1,0 +1,4834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>JigCoin</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
+
+  <!-- Telegram WebApp JS – needed so window.Telegram exists -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        sans-serif;
+      background: radial-gradient(circle at top, #1e3a8a, #020617 48%, #000000 90%);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100dvh;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 420px;
+      height: 100vh;
+      max-height: 900px;
+      background: radial-gradient(
+        circle at top,
+        #1e293b 0%,
+        #020617 30%,
+        #000000 85%
+      );
+      border-radius: 32px 32px 0 0;
+      box-shadow: 0 18px 60px rgba(15, 23, 42, 0.8),
+        inset 0 0 1px rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding-top: calc(10px + env(safe-area-inset-top));
+      padding-bottom: 8px;
+      position: relative;
+    }
+
+    .top-bar {
+      padding: calc(env(safe-area-inset-top) * 0.35) 16px 2px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .top-bar-left,
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .top-dot-menu {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      cursor: pointer;
+      background: radial-gradient(
+        circle at 0 0,
+        rgba(255, 255, 255, 0.12),
+        transparent 60%
+      );
+    }
+
+    .top-dot-menu span {
+      width: 3px;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(248, 250, 252, 0.9);
+    }
+
+    .mini-app-label {
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.9);
+      margin-left: 2px;
+    }
+
+    .header {
+      padding: 4px 16px 0;
+    }
+
+    .card {
+      background: radial-gradient(
+        circle at 0 -40%,
+        #f97316 0%,
+        #ec4899 35%,
+        #1e293b 70%
+      );
+      border-radius: 24px;
+      padding: 10px 12px 8px;
+      display: flex;
+      align-items: stretch;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.95),
+        inset 0 0 0 1px rgba(248, 250, 252, 0.1);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0 -10%, rgba(254, 249, 195, 0.3), transparent 55%),
+        radial-gradient(circle at 120% -10%, rgba(251, 113, 133, 0.35), transparent 55%);
+      mix-blend-mode: screen;
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .card-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 16px;
+      background: radial-gradient(circle at 30% 0, #facc15, #fb923c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.9),
+        inset 0 0 0 1px rgba(248, 250, 252, 0.4);
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+
+    .card-badge span {
+      font-size: 18px;
+    }
+
+    .card-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 12px rgba(15, 23, 42, 0.9);
+    }
+
+    .card-subtitle {
+      font-size: 11px;
+      color: rgba(248, 250, 252, 0.9);
+      line-height: 1.25;
+      max-width: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .card-pill {
+      margin-top: 0px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.9),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.5);
+      font-size: 9.5px;
+      color: rgba(226, 232, 240, 0.95);
+    }
+
+    .card-pill span:nth-child(2) {
+      padding-left: 6px;
+      border-left: 1px solid rgba(148, 163, 184, 0.6);
+    }
+
+    .card-balance-col {
+      min-width: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-balance-label {
+      font-size: 10px;
+      color: rgba(226, 232, 240, 0.85);
+    }
+
+    .card-balance-value {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 18px rgba(15, 23, 42, 0.8);
+    }
+
+    .card-balance-token {
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.95),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.4);
+    }
+
+    .card-balance-token span:first-child {
+      font-size: 13px;
+    }
+
+    /* Global rank block */
+    .global-rank-block {
+      margin-top: 5px;
+      width: 100%;
+      padding: 5px 8px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.96);
+      box-shadow:
+        0 10px 22px rgba(15, 23, 42, 0.95),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.45);
+    }
+
+    .global-rank-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .global-rank-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: rgba(148, 163, 184, 0.96);
+      white-space: nowrap;
+    }
+
+    .global-rank-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(248, 250, 252, 0.98);
+    }
+
+    .global-rank-bar {
+      position: relative;
+      width: 100%;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 1);
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.8);
+      margin-bottom: 3px;
+    }
+
+    .global-rank-fill {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: linear-gradient(
+        90deg,
+        rgba(56, 189, 248, 0.9),
+        rgba(251, 191, 36, 0.95),
+        rgba(249, 115, 22, 0.95)
+      );
+      transform-origin: left center;
+      transform: scaleX(0);
+      transition: transform 0.35s ease-out;
+    }
+
+    .global-rank-next {
+      font-size: 10px;
+      color: rgba(148, 163, 184, 0.96);
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .rank-bar {
+      margin-top: 6px;
+      margin-bottom: 4px;
+      background: linear-gradient(
+        90deg,
+        rgba(15, 23, 42, 0.96),
+        rgba(15, 23, 42, 0.98)
+      );
+      border-radius: 999px;
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 1),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .rank-fill {
+      position: absolute;
+      inset: 1px;
+      border-radius: 999px;
+      background: linear-gradient(
+        90deg,
+        rgba(234, 88, 12, 0.3),
+        rgba(234, 179, 8, 0.28)
+      );
+      transform-origin: left center;
+      transform: scaleX(0);
+      transition: transform 0.35s ease-out;
+      opacity: 0.9;
+    }
+
+    .rank-label {
+      position: relative;
+      z-index: 1;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(248, 250, 252, 0.9);
+    }
+
+    .rank-points {
+      position: relative;
+      z-index: 1;
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.94);
+    }
+
+    .main {
+      flex: 1;
+      padding: 4px 16px 4px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+
+    .main::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tap-card {
+      margin-top: 8px;
+      border-radius: 24px;
+      padding: 12px 14px 16px;
+      background: radial-gradient(
+          circle at 0 -20%,
+          rgba(251, 191, 36, 0.25),
+          transparent 55%
+        ),
+        radial-gradient(
+          circle at 100% -20%,
+          rgba(96, 165, 250, 0.35),
+          transparent 60%
+        ),
+        radial-gradient(
+          circle at 50% 120%,
+          rgba(13, 148, 136, 0.3),
+          transparent 60%
+        ),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.95));
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.98),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.16);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tap-card::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: radial-gradient(
+          circle at 0 -30%,
+          rgba(253, 224, 71, 0.2),
+          transparent 55%
+        ),
+        radial-gradient(
+          circle at 100% 0,
+          rgba(129, 140, 248, 0.18),
+          transparent 55%
+        );
+      mix-blend-mode: screen;
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .tap-card-header {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .tap-card-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 230px;
+    }
+
+    .tap-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .tap-subtitle {
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.9);
+      line-height: 1.4;
+    }
+
+    .tap-hint {
+      font-size: 11px;
+      color: rgba(248, 250, 252, 0.95);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.4);
+    }
+
+    .tap-btn-wrap {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .tap-btn-main {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: none;
+      background: radial-gradient(
+          circle at 30% 0%,
+          rgba(253, 224, 71, 0.45),
+          transparent 50%
+        ),
+        radial-gradient(
+          circle at 70% 0%,
+          rgba(251, 113, 133, 0.45),
+          transparent 50%
+        ),
+        radial-gradient(
+          circle at 50% 120%,
+          rgba(14, 165, 233, 0.6),
+          transparent 55%
+        ),
+        linear-gradient(145deg, #0f172a, #020617);
+      box-shadow:
+        0 24px 60px rgba(15, 23, 42, 1),
+        0 0 0 1px rgba(248, 250, 252, 0.12),
+        inset 0 0 0 1px rgba(15, 23, 42, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+}
+
+    .tap-btn-main::before {
+      content: "";
+      position: absolute;
+      inset: 18%;
+      border-radius: 999px;
+      border: 1px dashed rgba(248, 250, 252, 0.4);
+      opacity: 0.65;
+    }
+
+    .tap-btn-main:active {
+      transform: scale(0.97);
+      box-shadow:
+        0 18px 45px rgba(15, 23, 42, 0.9),
+        0 0 0 1px rgba(248, 250, 252, 0.08),
+        inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+
+    .tap-btn-ring {
+      position: absolute;
+      inset: 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(248, 250, 252, 0.12);
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.6);
+      opacity: 0.85;
+    }
+
+    .tap-btn-label {
+      position: relative;
+      z-index: 1;
+    }
+
+    .tap-metrics {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tap-metric {
+      border-radius: 14px;
+      padding: 7px 9px 6px;
+      background: rgba(15, 23, 42, 0.96);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.95),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: rgba(148, 163, 184, 0.96);
+    }
+
+    .metric-value {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .metric-sub {
+      font-size: 10px;
+      color: rgba(148, 163, 184, 0.96);
+    }
+
+    .energy-bar {
+      width: 100%;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 1);
+      overflow: hidden;
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.8);
+    }
+
+    .energy-fill {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: linear-gradient(
+        90deg,
+        rgb(34, 197, 94),
+        rgb(234, 179, 8),
+        rgb(248, 113, 113)
+      );
+      transform-origin: left center;
+      transform: scaleX(1);
+      transition: transform 0.25s ease-out;
+    }
+
+    .tasks {
+      margin-top: 12px;
+      margin-bottom: 16px;
+    }
+
+    .tasks-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .tasks-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .tasks-subtitle {
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.96);
+      margin-bottom: 8px;
+    }
+
+    .tasks-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    /* If the grid has an odd number of cards, make the last one span full width (keeps layout clean) */
+    .tasks-grid .task-card:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+
+    /* For the 6-card Control Center, keep everything equal-sized */
+    .tasks-grid-6 .task-card:last-child:nth-child(odd) { grid-column: auto; }
+
+    /* VIP callout styling (subtle, premium) */
+    .task-card.task-vip {
+      background: radial-gradient(circle at 20% 0, rgba(250, 204, 21, 0.22), rgba(15, 23, 42, 0.98) 55%);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.98),
+        inset 0 0 0 1px rgba(250, 204, 21, 0.35);
+    }
+
+    .task-card.task-vip .task-reward { filter: drop-shadow(0 8px 18px rgba(250, 204, 21, 0.22)); }
+
+    /* Floating Boost Hub button */
+    .fab-shop {
+      position: absolute;
+      right: 14px;
+      bottom: calc(74px + env(safe-area-inset-bottom));
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 999px;
+      cursor: pointer;
+      color: rgba(15, 23, 42, 0.98);
+      background: radial-gradient(circle at 30% 0, rgba(250, 204, 21, 1), rgba(251, 146, 60, 1));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55),
+        inset 0 0 0 1px rgba(248, 250, 252, 0.35);
+      z-index: 20;
+      transform: translateZ(0);
+      animation: softPulse 2.6s ease-in-out infinite;
+    }
+
+    .fab-icon { font-size: 16px; line-height: 1; }
+    .fab-label { font-size: 11px; font-weight: 800; letter-spacing: 0.02em; opacity: 0.95; }
+
+    @keyframes softPulse {
+      0% { box-shadow: 0 18px 40px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(248,250,252,0.35); }
+      50% { box-shadow: 0 22px 50px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(248,250,252,0.42); }
+      100% { box-shadow: 0 18px 40px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(248,250,252,0.35); }
+    }
+
+    .task-card {
+      border-radius: 18px;
+      padding: 8px 9px;
+      background: linear-gradient(
+        145deg,
+        rgba(15, 23, 42, 0.98),
+        rgba(15, 23, 42, 0.98)
+      );
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.98),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.28);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .task-card.task-disabled {
+      opacity: 0.55;
+      filter: saturate(0.7);
+    }
+
+    .task-card.task-disabled::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.35);
+      pointer-events: none;
+    }
+
+
+    .task-card::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: radial-gradient(
+          circle at 0 0,
+          rgba(251, 191, 36, 0.2),
+          transparent 55%
+        ),
+        radial-gradient(
+          circle at 120% -10%,
+          rgba(96, 165, 250, 0.2),
+          transparent 55%
+        );
+      opacity: 0.9;
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    .task-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .task-title {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .task-reward {
+      font-size: 11px;
+      color: rgba(251, 191, 36, 0.95);
+    }
+
+    .task-desc {
+      position: relative;
+      z-index: 1;
+      font-size: 10px;
+      color: rgba(148, 163, 184, 0.96);
+      line-height: 1.35;
+    }
+
+    .streak-row {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .streak-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: rgba(248, 250, 252, 0.96);
+    }
+
+    .streak-meter {
+      width: 120px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.9);
+    }
+
+    .streak-meter-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(
+        90deg,
+        rgba(234, 179, 8, 0.95),
+        rgba(244, 114, 182, 0.95)
+      );
+      transition: width 0.3s ease-out;
+    }
+
+    .bottom-nav {
+      margin-top: 2px;
+      padding: 6px 10px 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      border-radius: 999px;
+      background: radial-gradient(
+        circle at 0 -40%,
+        rgba(15, 23, 42, 1),
+        rgba(15, 23, 42, 1)
+      );
+      box-shadow: 0 -4px 26px rgba(15, 23, 42, 0.8),
+        inset 0 0 0 1px rgba(30, 64, 175, 0.8);
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+    }
+
+    .nav-btn {
+      flex: 1;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: rgba(148, 163, 184, 0.96);
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 5px 0 4px;
+      cursor: pointer;
+    }
+
+    .nav-btn span {
+      font-size: 10px;
+    }
+
+    .nav-btn .nav-icon {
+      font-size: 16px;
+    }
+
+    .nav-btn.active {
+      background: radial-gradient(
+        circle at 50% 0,
+        rgba(251, 191, 36, 0.12),
+        rgba(30, 64, 175, 0.96)
+      );
+      color: rgba(248, 250, 252, 0.98);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.9),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.5);
+    }
+
+    .friends-sheet {
+      color: white;
+    }
+
+    .sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease-out;
+      z-index: 10;
+    }
+
+    .sheet-backdrop.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sheet {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%) translateY(100%);
+      width: 100%;
+      max-width: 420px;
+      max-height: 82vh;
+      background: radial-gradient(
+        circle at 0 -40%,
+        #1e293b 0%,
+        #020617 30%,
+        #020617 100%
+      );
+      border-radius: 24px 24px 0 0;
+      box-shadow: 0 -20px 60px rgba(15, 23, 42, 1),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.18s ease-out, opacity 0.18s ease-out;
+      overflow: hidden;
+    }
+
+    .sheet.show {
+      transform: translateX(-50%) translateY(0%);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sheet-header {
+      padding: 12px 16px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-bottom: 1px solid rgba(30, 64, 175, 0.7);
+    }
+
+    .sheet-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .sheet-subtitle {
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.96);
+      margin-top: 2px;
+      max-width: 260px;
+    }
+
+    .sheet-close {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.96);
+      color: rgba(248, 250, 252, 0.96);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sheet-body {
+      padding: 10px 16px 16px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+
+    .sheet-body::-webkit-scrollbar {
+      display: none;
+    }
+
+    .friends-summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .friends-summary-col {
+      border-radius: 16px;
+      padding: 8px 9px;
+      background: rgba(15, 23, 42, 0.98);
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.98),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+    }
+
+    .friends-summary-col span:first-child {
+      color: rgba(148, 163, 184, 0.96);
+    }
+
+    .friends-summary-col span:last-child {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .friends-link-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .friends-link {
+      flex: 1;
+      padding: 7px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.5);
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.98);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .friends-copy-btn {
+      flex-shrink: 0;
+      border-radius: 999px;
+      border: none;
+      background: rgba(30, 64, 175, 1);
+      color: white;
+      font-size: 11px;
+      padding: 6px 10px 5px;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.9);
+    }
+
+    .friends-share-btn {
+      width: 100%;
+      margin-top: 2px;
+      margin-bottom: 10px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(
+        90deg,
+        rgba(56, 189, 248, 1),
+        rgba(249, 115, 22, 1)
+      );
+      color: rgba(15, 23, 42, 1);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 9px 0 8px;
+      cursor: pointer;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 1);
+    }
+
+    .friends-boost-pill {
+      border-radius: 16px;
+      padding: 8px 9px;
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.96);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .withdraw-card {
+      border-radius: 18px;
+      padding: 10px 11px;
+      background: radial-gradient(
+          circle at 0 -20%,
+          rgba(56, 189, 248, 0.22),
+          transparent 55%
+        ),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 1),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .withdraw-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .withdraw-amount {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .balance-token-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 0, #fbbf24, #f97316);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 1),
+        inset 0 0 0 1px rgba(248, 250, 252, 0.4);
+    }
+
+    .withdraw-sub {
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.96);
+    }
+
+    .coming-soon-pill {
+      margin-top: 10px;
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(15, 23, 42, 0.96);
+      box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.9);
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.96);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .coming-soon-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
+    }
+
+    .withdraw-help {
+      margin-top: 10px;
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.96);
+    }
+
+    .withdraw-bottom-btn {
+      margin-top: 12px;
+      width: 100%;
+      border-radius: 999px;
+      border: none;
+      padding: 9px 0 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(15, 23, 42, 1);
+      color: rgba(148, 163, 184, 0.96);
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.3);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 82px;
+      transform: translateX(-50%) translateY(10%);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.96);
+      padding: 6px 12px 6px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      font-size: 11px;
+      color: rgba(248, 250, 252, 0.96);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.98);
+      opacity: 0;
+      transition: opacity 0.16s ease-out, transform 0.16s ease-out;
+      z-index: 40;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0%);
+    }
+
+    .toast-icon {
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        align-items: stretch;
+      }
+      .app-shell {
+        max-width: 100%;
+        height: 100dvh;
+        max-height: none;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .main {
+        padding-bottom: 12px;
+      }
+    }
+
+    /* Small-height devices: keep the bottom "Control center" visible without losing polish */
+    @media (max-height: 740px) {
+      .header { padding: 2px 16px 0; }
+      .tap-card { margin-top: 6px; padding: 10px 12px 12px; }
+      .tap-btn-wrap { margin-top: 8px; }
+      .tap-btn-main { width: 150px; height: 150px; }
+      .tap-metrics { margin-top: 10px; }
+      .tasks { margin-top: 10px; }
+    }
+  
+    /* === Upgrades pack (timers, tiers, events, withdraw requests) === */
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.2px;
+      background: rgba(15, 23, 42, 0.75);
+      box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.55);
+      color: rgba(248,250,252,0.95);
+      white-space:nowrap;
+    }
+    .pill.good { box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.55); }
+    .pill.warn { box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.6); }
+    .pill.cooldown { box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.55); }
+    .pill.dim { opacity:.8; }
+
+    .event-banner {
+      margin: 10px 0 0;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(30,64,175,0.65), rgba(15,23,42,0.85));
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(148,163,184,0.25);
+      display:none;
+    }
+    .event-banner.show { display:block; }
+    .event-title { font-weight:800; font-size:13px; }
+    .event-sub { opacity:.9; font-size:12px; margin-top:2px; }
+    .event-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+
+    .tier-card {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(15,23,42,0.55);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.18);
+    }
+    .tier-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .tier-title { font-weight:800; }
+    .tier-meta { opacity:.9; font-size:12px; margin-top:4px; }
+    .tier-bar { height: 8px; border-radius: 999px; overflow:hidden; background: rgba(2,6,23,0.65); margin-top:10px; box-shadow: inset 0 0 0 1px rgba(148,163,184,0.15); }
+    .tier-fill { height:100%; width:0%; background: linear-gradient(90deg, rgba(34,197,94,0.9), rgba(59,130,246,0.9)); }
+
+    .withdraw-form {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(15,23,42,0.55);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.18);
+    }
+    .field {
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-top:10px;
+    }
+    .field label { font-size:11px; opacity:.9; }
+    .field input {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: none;
+      outline: none;
+      background: rgba(2,6,23,0.7);
+      color: rgba(248,250,252,0.95);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.2);
+      font-size: 13px;
+    }
+    .btn.full { width:100%; }
+    .btn.dim { opacity: .65; }
+
+  
+    /* --- Viral / trust UI additions --- */
+    .social-proof {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.65);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.16);
+    }
+    .social-proof-row { display:flex; gap:10px; }
+    .sp-item {
+      flex:1;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(2, 6, 23, 0.55);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.14);
+    }
+    .sp-label { font-size: 11px; opacity: .82; }
+    .sp-value { margin-top: 4px; font-size: 16px; font-weight: 900; }
+
+    .share-card {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.65);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.16);
+    }
+    .share-card-header { font-weight: 900; letter-spacing: .2px; }
+    .share-card canvas {
+      width: 100%;
+      height: auto;
+      display:block;
+      margin-top: 10px;
+      border-radius: 16px;
+      background: rgba(2,6,23,0.55);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.14);
+    }
+    .share-card-actions { display:flex; gap:10px; margin-top: 10px; }
+    .share-card-hint { margin-top: 8px; font-size: 11px; opacity: .82; }
+
+    .withdraw-steps {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.65);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.16);
+    }
+    .checklist { margin-top: 8px; display:flex; flex-direction:column; gap:8px; }
+    .check-item {
+      display:flex; align-items:flex-start; gap:10px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(2,6,23,0.55);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.14);
+    }
+    .check-dot {
+      width: 18px; height: 18px; border-radius: 999px;
+      display:flex; align-items:center; justify-content:center;
+      font-size: 12px;
+      background: rgba(148,163,184,0.18);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.18);
+      flex: 0 0 auto;
+      margin-top: 1px;
+    }
+    .check-item.good .check-dot { background: rgba(16,185,129,0.18); box-shadow: inset 0 0 0 1px rgba(16,185,129,0.25); }
+    .check-item.warn .check-dot { background: rgba(245,158,11,0.18); box-shadow: inset 0 0 0 1px rgba(245,158,11,0.25); }
+    .check-title { font-weight: 900; font-size: 12px; }
+    .check-sub { font-size: 11px; opacity: .82; margin-top: 2px; }
+
+    .payout-feed { margin-top: 12px; display:flex; flex-direction:column; gap:8px; }
+    .payout-row {
+      display:flex; justify-content:space-between; align-items:center;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(2,6,23,0.55);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.14);
+      font-size: 12px;
+    }
+    .payout-muted { opacity: .82; font-size: 11px; }
+
+/* Launch Phase Boost banner */
+.launch-boost{
+  margin-top:12px;
+  padding:12px 12px;
+  border-radius:16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(8px);
+}
+.launch-boost .lb-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:700;
+  font-size:12px;
+  letter-spacing:0.2px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.launch-boost .lb-text{
+  margin-top:8px;
+  font-size:13px;
+  line-height:1.35;
+  opacity:0.95;
+}
+.launch-boost.small{
+  margin-top:6px;
+  padding:8px 9px;
+  border-radius:12px;
+  display:flex;
+  flex-direction:row;
+  align-items:flex-start;
+  gap:8px;
+}
+.launch-boost.small .lb-text{
+  margin-top:0;
+  font-size:11.5px;
+  line-height:1.22;
+}
+.launch-boost.small .lb-badge{
+  font-size:10.5px;
+  padding:4px 8px;
+  white-space:nowrap;
+}
+</style>
+
+<style>
+.header,.top-card{padding-top:6px!important;padding-bottom:4px!important}
+.tap-card{margin-top:8px!important;margin-bottom:8px!important}
+.event-banner{padding:10px 12px;background:rgba(255,215,0,.12);border-radius:10px}
+.early-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999}
+.early-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#111;color:#fff;padding:20px;border-radius:14px;z-index:1000;max-width:90%}
+.early-modal button{margin-top:12px;width:100%}
+.og-banner{margin:8px;padding:8px;background:rgba(0,255,150,.15);border-radius:8px;font-size:14px}
+
+
+/* Startup FOMO modal (blocking until acknowledged) */
+.fomo-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(6px);z-index:2000}
+.fomo-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,92vw);
+  background:rgba(15,23,42,.92);border-radius:18px;padding:16px 16px 14px;z-index:2001;
+  box-shadow:0 24px 80px rgba(0,0,0,.55), inset 0 0 0 1px rgba(148,163,184,.35)}
+.fomo-title{font-size:16px;font-weight:800;letter-spacing:.01em;margin:0 0 6px}
+.fomo-copy{margin:0;font-size:13px;line-height:1.28;color:rgba(226,232,240,.95)}
+.fomo-bullets{margin:10px 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.fomo-bullets li{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.25;color:rgba(226,232,240,.95)}
+.fomo-bullets .dot{width:18px;height:18px;border-radius:6px;display:grid;place-items:center;
+  background:rgba(255,215,0,.14);box-shadow:inset 0 0 0 1px rgba(255,215,0,.25)}
+.fomo-actions{display:flex;gap:10px}
+.fomo-actions button{flex:1;border:none;border-radius:14px;padding:10px 12px;font-weight:800;
+  color:#0b1220;background:linear-gradient(135deg, rgba(255,215,0,.95), rgba(255,165,0,.95));
+  box-shadow:0 12px 24px rgba(0,0,0,.35);cursor:pointer}
+.fomo-actions .ghost{background:rgba(148,163,184,.14);color:rgba(241,245,249,.95);
+  box-shadow:inset 0 0 0 1px rgba(148,163,184,.30)}
+.fomo-fine{margin:10px 0 0;font-size:11.5px;color:rgba(148,163,184,.95);line-height:1.25}
+/* v4 premium header rebalance + FOMO */
+.header .card{padding:8px 10px 8px!important;border-radius:22px!important}
+.card-title{font-size:22px!important;line-height:1.05!important}
+.card-subtitle{
+  font-size:12.5px!important;
+  line-height:1.22!important;
+  opacity:.92!important;
+  display:block!important;
+  white-space:normal!important;
+  overflow:visible!important;
+}
+.card-pill span{font-size:11px!important;padding:5px 8px!important}
+.card-balance-col{
+  flex:0 0 132px!important;
+  max-width:132px!important;
+}
+.launch-boost-pill{
+  margin-top:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  font-size:11.5px;
+  line-height:1;
+  white-space:nowrap;
+  align-self:flex-end;
+
+  cursor: pointer;
+  color: inherit;
+  font: inherit;}
+.og-banner{
+  margin:6px 0 0 0!important;
+  padding:7px 10px!important;
+  background:rgba(255,215,0,.14)!important;
+  border:1px solid rgba(255,215,0,.22)!important;
+  border-radius:12px!important;
+  font-size:12px!important;
+  line-height:1.18!important;
+}
+.global-rank-block{margin-top:6px!important}
+
+</style>
+
+</head>
+<body>
+  <div class="app-shell">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div class="top-dot-menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <span class="mini-app-label">JigCoin · Mini app</span>
+      </div>
+      <div class="top-bar-right">
+        <span style="font-size: 11px; color: rgba(148,163,184,0.9)">Season 1 · Early Access</span>
+      </div>
+    </div>
+
+    <div class="header">
+      <div class="card">
+        <div class="card-badge">
+          <span>🪙</span>
+        </div>
+        <div class="card-main">
+          <div class="card-title">JigCoin</div>
+          <div class="card-subtitle">Earn early: tap + complete quests. Invite friends for bonus coins and climb the ranks.</div>
+<div class="card-pill">
+            <span>Live testnet farm</span>
+            <span>Rank → token allocation</span>
+          </div>
+        </div>
+        <div class="card-balance-col">
+          <span class="card-balance-label">Your balance</span>
+          <span class="card-balance-value" id="balanceText">0</span>
+          <span class="card-balance-token">
+            <span>🌕</span>
+            <span id="rankName">Recruit</span>
+          </span>
+
+          <!-- Global Rank block -->
+          <div class="global-rank-block">
+            <div class="global-rank-top-row">
+              <span class="global-rank-label">Global rank</span>
+              <span class="global-rank-value" id="globalRankValue">#–</span>
+            </div>
+            <div class="global-rank-bar">
+              <div class="global-rank-fill" id="globalRankFill"></div>
+            </div>
+            <div class="global-rank-next" id="globalRankNextText">
+              Play to join the leaderboard
+            </div>
+          </div>
+          <!-- END Global Rank block -->
+        </div>
+      </div>
+
+
+      <div class="event-banner" id="eventBanner">
+        <div class="event-row">
+          <div>
+            <div class="event-title" id="eventTitle">Live event</div>
+            <div class="event-sub" id="eventSub">Boosted rewards are active.</div>
+          </div>
+          <div class="pill cooldown" id="seasonPill">Season</div>
+        </div>
+      </div>
+
+      <div class="rank-bar">
+        <div class="rank-fill" id="rankProgressFill"></div>
+        <div class="rank-label">
+          <span id="rankPointsText">0</span>
+        </div>
+        <div class="rank-points">
+          Next rank at <span id="nextRankPointsText">10,000</span> pts
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="tap-card">
+        <div class="tap-card-header">
+          <div class="tap-card-left">
+            <div class="tap-title">Tap to farm points</div>
+            <div class="tap-subtitle">
+              Your energy refills over time. Use it to farm your allocation before the token goes live.
+            </div>
+            <div class="tap-hint">
+              Each tap currently gives <span id="perTap">+1</span> 🌕.
+            </div>
+          </div>
+        </div>
+
+        <div class="tap-btn-wrap">
+          <button class="tap-btn-main" id="tapBtn">
+            <div class="tap-btn-ring"></div>
+            <div class="tap-btn-label">Tap</div>
+          </button>
+        </div>
+
+        <div class="tap-metrics">
+          <div class="tap-metric">
+            <div class="metric-label">Energy</div>
+            <div class="energy-bar">
+              <div class="energy-fill" id="energyFill"></div>
+            </div>
+            <div class="metric-sub">
+              <span id="energyText">0 / 50</span>
+            </div>
+          </div>
+          <div class="tap-metric">
+            <div class="metric-label">Today</div>
+            <div class="metric-value" id="todayText">0</div>
+          </div>
+          <div class="tap-metric">
+            <div class="metric-label">Rank points</div>
+            <div class="metric-value" id="rankMetricPointsText">0</div>
+            <div class="metric-sub">
+              Progress to next rank
+            </div>
+          </div>
+        </div>
+
+        <div class="streak-row">
+          <div class="streak-label">
+            <span>🔥</span>
+            <span>Daily streak</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div class="streak-meter">
+              <div class="streak-meter-fill" id="streakMeterFill"></div>
+            </div>
+            <span id="streakDaysText">0 days</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tasks">
+        <div class="tasks-title-row">
+          <div class="tasks-title">Control center</div>
+        </div>
+        <div class="tasks-subtitle">
+          You’re early. Protect momentum, climb the rankings, and unlock perks.
+        </div>
+
+        <!-- Boost quests grid with Double Points + Energy refill -->
+        <div class="tasks-grid tasks-grid-6">
+          <div class="task-card task-vip" data-code="vip_pass" data-reward="0">
+            <div class="task-top">
+              <div class="task-title">VIP Advantage</div>
+              <div class="task-reward">⭐</div>
+            </div>
+            <div class="task-desc">
+              Built for serious farmers. VIP badge, priority perks, and momentum protection.
+            </div>
+          </div>
+
+          <div class="task-card" data-code="boost_hub" data-reward="0">
+            <div class="task-top">
+              <div class="task-title">Boost Hub</div>
+              <div class="task-reward">⚡</div>
+            </div>
+            <div class="task-desc">
+              Secure your rank: activate boosts, refill energy, or top up fuel packs.
+            </div>
+          </div>
+
+          <div class="task-card" data-code="invite_friend" data-reward="800">
+            <div class="task-top">
+              <div class="task-title">Invite</div>
+              <div class="task-reward">+800 🌕</div>
+            </div>
+            <div class="task-desc">
+              Bring friends in. Earn when they join and start farming. Growth = advantage.
+            </div>
+          </div>
+
+          <div class="task-card" data-code="open_tasks" data-reward="0">
+            <div class="task-top">
+              <div class="task-title">Tasks</div>
+              <div class="task-reward">✅</div>
+            </div>
+            <div class="task-desc">
+              Daily missions, sponsor quests, and progress rewards. Stay consistent to climb.
+            </div>
+          </div>
+
+          <div class="task-card" data-code="leaderboard" data-reward="0">
+            <div class="task-top">
+              <div class="task-title">Leaderboard</div>
+              <div class="task-reward">🏆</div>
+            </div>
+            <div class="task-desc">
+              Track your position and the distance to the next rank. Don’t let others pass you.
+            </div>
+          </div>
+
+          <div class="task-card" data-code="daily" data-reward="500">
+            <div class="task-top">
+              <div class="task-title">Daily check-in</div>
+              <div class="task-reward" id="dailyRewardText">+500 🌕</div>
+            </div>
+            <div class="task-desc">
+              Claim once per day to keep your streak alive and protect momentum.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Boost Hub button (always available) -->
+      <button class="fab-shop" id="fabShop" aria-label="Open Boost Hub">
+        <span class="fab-icon">⚡</span>
+        <span class="fab-label">Boost</span>
+      </button>
+
+      <div class="bottom-nav">
+        <button class="nav-btn active" id="tabFarm">
+          <div class="nav-icon">🏠</div>
+          <span>Home</span>
+        </button>
+        <button class="nav-btn" id="tabTasks">
+          <div class="nav-icon">⚡️</div>
+          <span>Boost</span>
+        </button>
+        <button class="nav-btn" id="tabFriends">
+          <div class="nav-icon">👥</div>
+          <span>Invite</span>
+        </button>
+        <button class="nav-btn" id="tabWithdraw">
+          <div class="nav-icon">🏦</div>
+          <span>Vault</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet-backdrop" id="sheetBackdrop"></div>
+
+  <div class="sheet" id="friendsSheet">
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Invite friends · earn permanently</div>
+        <div class="sheet-subtitle">
+          You earn every time someone you invite joins and starts farming. Early users lock higher referral rewards before rates reduce.
+        </div>
+<div class="launch-boost" id="launchBoostInvite">
+  <div class="lb-badge">🚀 Launch Phase Boost</div>
+  <div class="lb-text">🚀 Invite friends. Earn more — permanently. Early Access rewards are highest now. As more users join, referral rates reduce automatically — early advantage cannot be recovered.</div>
+  <div class="launch-boost-pill" id="launchBoostCountdown" title="Launch Phase window">⏳ Loading…</div>
+</div>
+
+      </div>
+      <button class="sheet-close" id="friendsClose">×</button>
+    </div>
+
+    <div class="sheet-body">
+      <div class="friends-summary">
+        <div class="friends-summary-col">
+          <span>Friends joined</span>
+          <span id="friendsJoinedText">0</span>
+        </div>
+        <div class="friends-summary-col">
+          <span>Referral points</span>
+          <span id="referralPointsText">0</span>
+        </div>
+      </div>
+
+      
+      <div class="tier-card" id="refTierCard">
+        <div class="tier-top">
+          <div>
+            <div class="tier-title">Referral ladder</div>
+            <div class="tier-meta" id="refTierMeta">Loading your tier…</div>
+          </div>
+          <div class="pill good" id="refTierPill">Tier</div>
+        </div>
+        <div class="tier-bar"><div class="tier-fill" id="refTierFill"></div></div>
+        <div class="tier-meta" id="refTierNext">Next tier: …</div>
+      </div>
+
+
+      <div class="social-proof" id="socialProof">
+        <div class="social-proof-row">
+          <div class="sp-item">
+            <div class="sp-label">Joined today</div>
+            <div class="sp-value" id="joinedTodayText">–</div>
+          </div>
+          <div class="sp-item">
+            <div class="sp-label">Top inviter</div>
+            <div class="sp-value" id="topInviterText">–</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="share-card" id="shareCard">
+        <div class="share-card-header">Share your progress</div>
+        <canvas id="shareCardCanvas" width="960" height="540"></canvas>
+        <div class="share-card-actions">
+          <button class="btn" id="copyShareTextBtn">Copy share text</button>
+          <button class="btn" id="downloadShareCardBtn">Download card</button>
+        </div>
+        <div class="share-card-hint">Tip: share this card and pin your invite link. Your rank + streak drives FOMO.</div>
+      </div>
+
+<div class="friends-link-row">
+        <div class="friends-link" id="inviteLinkText">
+          https://resilient-kheer-041b8c.netlify.app
+        </div>
+        <button class="friends-copy-btn" id="copyInviteBtn">Copy</button>
+      </div>
+
+      <button class="friends-share-btn" id="shareTelegramBtn">
+        Share
+      </button>
+
+      <div class="friends-boost-pill">
+        <span>Invite now to secure your edge:</span>
+        <span>+800 🌕</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="withdrawSheet">
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Withdraw · coming soon</div>
+        <div class="sheet-subtitle">
+          Withdrawals open after the JigCoin token launches publicly.
+        </div>
+      </div>
+      <button class="sheet-close" id="withdrawClose">×</button>
+    </div>
+    <div class="sheet-body">
+      <div class="withdraw-card">
+        <div class="withdraw-row">
+          <div>
+            <div
+              style="font-size: 11px; color: rgba(148, 163, 184, 0.95)"
+            >
+              Your current balance
+            </div>
+            <div class="withdraw-amount" id="withdrawBalanceText">0</div>
+          </div>
+          <div class="balance-token-icon">
+            <span>🪙</span>
+          </div>
+        </div>
+        <div class="withdraw-sub">
+          Withdrawals are not live yet. Your points will convert into token
+          allocation when the JigCoin token launches.
+        </div>
+      
+      </div>
+
+      <div class="withdraw-steps" id="withdrawSteps">
+        <div style="font-weight:900;">Withdraw readiness</div>
+        <div style="opacity:.85; font-size:11px; margin-top:4px;">
+          We show the exact rules so users trust the system. When backend enforcement is enabled, this checklist will match it.
+        </div>
+
+        <div class="checklist" id="withdrawChecklist">
+          <div class="check-item warn" id="wlMinBalance">
+            <div class="check-dot">•</div>
+            <div>
+              <div class="check-title">Minimum balance</div>
+              <div class="check-sub" id="wlMinBalanceSub">Checking…</div>
+            </div>
+          </div>
+
+          <div class="check-item warn" id="wlSponsorReq">
+            <div class="check-dot">•</div>
+            <div>
+              <div class="check-title">Sponsor activity (last 7 days)</div>
+              <div class="check-sub" id="wlSponsorReqSub">Checking…</div>
+            </div>
+          </div>
+
+          <div class="check-item warn" id="wlAccountAge">
+            <div class="check-dot">•</div>
+            <div>
+              <div class="check-title">Account age</div>
+              <div class="check-sub" id="wlAccountAgeSub">Checking…</div>
+            </div>
+          </div>
+
+          <div class="check-item warn" id="wlRisk">
+            <div class="check-dot">•</div>
+            <div>
+              <div class="check-title">Security check</div>
+              <div class="check-sub" id="wlRiskSub">Checking…</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px; font-weight:900;">Recent payouts</div>
+        <div class="payout-muted">Proof-of-payment will appear here once withdrawals are enabled.</div>
+        <div class="payout-feed" id="recentPayouts">
+          <div class="payout-row"><span>—</span><span class="payout-muted">Waiting for launch</span></div>
+        </div>
+      </div>
+
+      <div class="withdraw-form" id="withdrawForm">
+
+        <div style="font-weight:800;">Early withdraw request</div>
+        <div style="opacity:.9; font-size:12px; margin-top:4px;">
+          If withdrawals are enabled on the backend, you can submit a request for review.
+        </div>
+
+        <div class="field">
+          <label>Amount (points)</label>
+          <input id="withdrawAmount" type="number" inputmode="numeric" placeholder="e.g. 5000" />
+        </div>
+
+        <div class="field">
+          <label>Wallet / Address</label>
+          <input id="withdrawAddress" type="text" placeholder="Paste your wallet address" />
+        </div>
+
+        <button class="btn full" id="withdrawRequestBtn" style="margin-top:12px;">Request withdraw</button>
+        <div style="opacity:.8; font-size:11px; margin-top:8px;" id="withdrawRequestHint">
+          Minimums, limits and review time are controlled by the backend.
+        </div>
+      </div>
+
+<div class="coming-soon-pill">
+        <div class="coming-soon-dot"></div>
+        <span>On-chain withdraws &amp; quests are under construction.</span>
+      </div>
+
+      <div class="withdraw-help">
+        Stay tuned in the official JigCoin Telegram and Instagram for
+        launch announcements and premium quests.
+      </div>
+
+      <button class="withdraw-bottom-btn" disabled>
+        Withdrawals opening soon
+      </button>
+    </div>
+  </div>
+
+  <div class="sheet" id="vipSheet">
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">VIP Advantage</div>
+        <div class="sheet-subtitle">
+          Built for serious farmers. Protect momentum, earn faster, and stand out on the leaderboard.
+        </div>
+      </div>
+      <button class="sheet-close" id="vipClose">×</button>
+    </div>
+    <div class="sheet-body">
+      <div class="withdraw-card" style="margin-bottom: 12px">
+        <div class="withdraw-row">
+          <div>
+            <div style="font-size: 11px; color: rgba(148, 163, 184, 0.95)">
+              VIP status
+            </div>
+            <div class="withdraw-amount" id="vipStatusText">Checking…</div>
+          </div>
+          <div class="balance-token-icon"><span>⭐</span></div>
+        </div>
+        <div class="withdraw-sub" id="vipPerksText">
+          VIP: 30 days · premium badge · priority perks · future drops.
+        </div>
+      </div>
+
+      <button class="friends-share-btn" id="vipBuyBtn">Activate VIP (30 days)</button>
+      <button class="withdraw-bottom-btn" id="vipPacksBtn">Open Boost Hub</button>
+    </div>
+  </div>
+
+  <!-- Coin shop (Stripe packs) -->
+  <div class="sheet" id="coinShopSheet">
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Boost Hub</div>
+        <div class="sheet-subtitle">Protect your momentum. Activate boosts or secure protection packs instantly via Stripe.</div>
+      </div>
+      <button class="sheet-close" id="coinShopClose">×</button>
+    </div>
+    <div class="sheet-body">
+      <div class="vip-box" style="margin-bottom:12px;">
+        <div style="font-weight:800; margin-bottom:6px;">Recommended</div>
+        <div style="opacity:.85; font-size:12px; line-height:1.35;">
+          Use boosts to secure your rank. Security packs open in Stripe; return here after activation and your coins are credited the moment the backend confirms.
+        </div>
+      </div>
+
+      
+      <div class="vip-box" style="margin-bottom:12px;">
+        <div style="font-weight:800; margin-bottom:6px;">Momentum boosts</div>
+        <div style="opacity:.85; font-size:12px; line-height:1.35; margin-bottom:10px;">
+          Fast actions for when you’re active. These are designed for impulse momentum.
+        </div>
+
+        <div class="tasks-grid" style="gap:10px;">
+          <div class="task-card" data-code="double_boost" data-reward="0" style="padding:10px 11px;">
+            <div class="task-top">
+              <div class="task-title">Double points</div>
+              <div class="task-reward" id="doubleBoostRewardText">x2 · 10 mins</div>
+            </div>
+            <div class="task-desc">Activate a short burst to climb quickly.</div>
+          </div>
+
+          <div class="task-card" data-code="boost_energy" data-reward="0" style="padding:10px 11px;">
+            <div class="task-top">
+              <div class="task-title">Energy refill</div>
+              <div class="task-reward" id="energyRefillRewardText">⚡ Full bar</div>
+            </div>
+            <div class="task-desc">Refill instantly when you want to keep farming.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="vip-box" style="margin-bottom:12px;">
+        <div style="font-weight:800; margin-bottom:6px;">Security packs</div>
+        <div style="opacity:.85; font-size:12px; line-height:1.35;">
+          Activate protection to lock in momentum. Bigger bundles = stronger protection.
+        </div>
+      </div>
+
+      <div id="coinPackList" class="vip-box" style="padding:0; overflow:hidden;">
+        <div style="padding:14px; opacity:.8;">Loading packs…</div>
+      </div>
+
+      <div class="vip-box" style="opacity:.85; margin-top:12px;">
+        Tip: If a link doesn’t open inside Telegram, update Telegram and allow external links.
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">
+    <span class="toast-icon">✨</span>
+    <span id="toastText">Saved</span>
+  </div>
+
+  <!-- SCRIPT STARTS IN PART 2 -->
+  
+  <div class="sheet" id="sponsorSheet">
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Sponsor quests</div>
+        <div class="sheet-subtitle">Complete partner tasks to earn points and unlock boosts.</div>
+      </div>
+      <button class="sheet-close" id="sponsorClose">✕</button>
+    </div>
+
+    <div class="sheet-body">
+      <div id="sponsorList" class="vip-box" style="margin-bottom:12px;">
+        <div style="opacity:.8;">Loading sponsor quests…</div>
+      </div>
+
+      <div class="vip-box" style="opacity:.8;">
+        Tip: If a quest sends you to a partner site, come back here and tap <b>Claim</b>.
+      </div>
+    </div>
+  </div>
+
+<script>
+const tg =
+  window.Telegram && window.Telegram.WebApp
+    ? window.Telegram.WebApp
+    : null;
+
+if (tg) {
+  tg.expand();
+  if (typeof tg.requestFullscreen === "function") {
+    tg.requestFullscreen();
+  }
+  tg.setHeaderColor("#050816");
+  tg.setBackgroundColor("#050816");
+}
+
+// Signed mini-app payload from Telegram (for backend)
+// initData is read dynamically inside apiPost() for iOS Telegram reliability.
+
+// Real Telegram user id from WebApp
+const telegramIdFromWebApp =
+  tg && tg.initDataUnsafe && tg.initDataUnsafe.user
+    ? tg.initDataUnsafe.user.id
+    : null;
+
+// Dev / browser fallback ID
+let fallbackTelegramId = null;
+if (!telegramIdFromWebApp) {
+  const stored = localStorage.getItem("ae_dev_telegram_id");
+  if (stored) {
+    const parsed = Number(stored);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      fallbackTelegramId = parsed;
+    }
+  }
+
+  if (!fallbackTelegramId) {
+    fallbackTelegramId =
+      1000000000 + Math.floor(Math.random() * 9000000000);
+    localStorage.setItem(
+      "ae_dev_telegram_id",
+      String(fallbackTelegramId)
+    );
+  }
+}
+
+// ID we send to backend
+// effectiveTelegramId is computed dynamically inside apiPost().
+
+const API_BASE = "https://jigcoin.onrender.com";
+const FALLBACK_REF_LINK = "https://t.me/JIGCOINBOT";
+
+
+// Stable client id for anti-abuse / device linking (frontend-only; backend can start using anytime)
+const CLIENT_ID_KEY = "ae_client_id";
+function getClientId() {
+  let id = localStorage.getItem(CLIENT_ID_KEY);
+  if (!id) {
+    id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ("cid_" + Math.random().toString(16).slice(2) + Date.now().toString(16));
+    localStorage.setItem(CLIENT_ID_KEY, id);
+  }
+  return id;
+}
+
+function getClientSignals() {
+  const wa = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  const tzOffsetMin = new Date().getTimezoneOffset();
+  return {
+    client_id: getClientId(),
+    platform: wa ? wa.platform : "web",
+    tg_version: wa ? wa.version : null,
+    color_scheme: wa ? wa.colorScheme : null,
+    viewport_h: window.innerHeight,
+    viewport_w: window.innerWidth,
+    lang: (navigator.language || "en"),
+    tz_offset_min: tzOffsetMin,
+  };
+}
+const BALANCE_KEY = "ae_balance";
+const ENERGY_KEY = "ae_energy";
+const TODAY_KEY = "ae_today";
+const LAST_DAY_KEY = "ae_lastday";
+
+const STREAK_DAYS_KEY = "ae_streak_days";
+const LAST_CHECKIN_KEY = "ae_last_checkin";
+const DAILY_TASK_KEY = "ae_daily_claimed_day";
+const INSTAGRAM_TASK_KEY = "ae_instagram_done";
+const INVITE_TASK_KEY = "ae_invite_done";
+const DAILY_CLAIM_AT_KEY = "ae_daily_claim_at";
+const INSTAGRAM_CLAIM_AT_KEY = "ae_instagram_claim_at";
+
+// UI-only cooldown helpers (backend will enforce too once we patch it)
+const DAILY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+const maxEnergy = 50;
+const perTapBase = 1;
+
+const balanceText = document.getElementById("balanceText");
+const energyText = document.getElementById("energyText");
+const todayText = document.getElementById("todayText");
+const perTapText = document.getElementById("perTap");
+const tapBtn = document.getElementById("tapBtn");
+const toast = document.getElementById("toast");
+const toastText = document.getElementById("toastText");
+
+const rankNameEl = document.getElementById("rankName");
+const rankPointsTextEl = document.getElementById("rankPointsText");
+const nextRankPointsTextEl = document.getElementById("nextRankPointsText");
+const rankProgressFill = document.getElementById("rankProgressFill");
+
+const streakDaysText = document.getElementById("streakDaysText");
+const streakMeterFill = document.getElementById("streakMeterFill");
+
+const tabFarm = document.getElementById("tabFarm");
+const tabTasks = document.getElementById("tabTasks");
+const tabFriends = document.getElementById("tabFriends");
+const tabWithdraw = document.getElementById("tabWithdraw");
+
+const sheetBackdrop = document.getElementById("sheetBackdrop");
+const friendsSheet = document.getElementById("friendsSheet");
+const withdrawSheet = document.getElementById("withdrawSheet");
+const vipSheet = document.getElementById("vipSheet");
+const sponsorSheet = document.getElementById("sponsorSheet");
+const friendsClose = document.getElementById("friendsClose");
+const withdrawClose = document.getElementById("withdrawClose");
+const vipClose = document.getElementById("vipClose");
+const coinShopSheet = document.getElementById("coinShopSheet");
+const coinShopClose = document.getElementById("coinShopClose");
+const fabShop = document.getElementById("fabShop");
+const coinPackList = document.getElementById("coinPackList");
+const sponsorClose = document.getElementById("sponsorClose");
+
+const vipStatusText = document.getElementById("vipStatusText");
+const vipPerksText = document.getElementById("vipPerksText");
+const vipBuyBtn = document.getElementById("vipBuyBtn");
+const vipPacksBtn = document.getElementById("vipPacksBtn");
+
+const sponsorList = document.getElementById("sponsorList");
+
+const friendsJoinedText = document.getElementById("friendsJoinedText");
+const referralPointsText = document.getElementById("referralPointsText");
+const inviteLinkText = document.getElementById("inviteLinkText");
+const copyInviteBtn = document.getElementById("copyInviteBtn");
+const shareTelegramBtn = document.getElementById("shareTelegramBtn");
+
+const copyShareTextBtn = document.getElementById("copyShareTextBtn");
+const downloadShareCardBtn = document.getElementById("downloadShareCardBtn");
+
+const withdrawBalanceText = document.getElementById("withdrawBalanceText");
+
+// Global rank DOM refs
+const globalRankValueEl = document.getElementById("globalRankValue");
+const globalRankFillEl = document.getElementById("globalRankFill");
+const globalRankNextTextEl = document.getElementById("globalRankNextText");
+const dailyRewardTextEl = document.getElementById("dailyRewardText");
+const doubleBoostRewardTextEl = document.getElementById("doubleBoostRewardText");
+const energyRefillRewardTextEl = document.getElementById("energyRefillRewardText");
+
+
+function showToast(message) {
+  toastText.textContent = message;
+  toast.classList.add("show");
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2100);
+}
+
+function formatNumber(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) {
+    // Avoid odd rendering (e.g. one leaderboard row showing different typography)
+    // when backend values arrive as strings/null.
+    return String(n ?? 0);
+  }
+  return x.toLocaleString("en-GB");
+}
+
+function getTodayString() {
+  return new Date().toDateString();
+}
+
+const rankConfig = [
+  { name: "Recruit", min: 0, max: 10000 },
+  { name: "Grinder", min: 10000, max: 50000 },
+  { name: "Operator", min: 50000, max: 150000 },
+  { name: "Commander", min: 150000, max: 500000 },
+  { name: "General", min: 500000, max: 1500000 },
+  { name: "Empire OG", min: 1500000, max: 999999999 },
+];
+
+const state = {
+  bal: 0,
+  energy: maxEnergy,
+  today: 0,
+  lastDay: "",
+  streakDays: 0,
+  lastCheckin: "",
+  friendsJoined: 0,
+  referralPoints: 0,
+  inviteLink: FALLBACK_REF_LINK,
+  globalRank: null,
+  globalTotal: null,
+
+  // Double points boost client state
+  doubleBoostActive: false,
+  doubleBoostUntil: null,
+};
+
+function saveStateLocal(s) {
+  localStorage.setItem(BALANCE_KEY, String(s.bal));
+  localStorage.setItem(ENERGY_KEY, String(s.energy));
+  localStorage.setItem(TODAY_KEY, String(s.today));
+  localStorage.setItem(LAST_DAY_KEY, s.lastDay || "");
+
+  localStorage.setItem(STREAK_DAYS_KEY, String(s.streakDays || 0));
+  localStorage.setItem(LAST_CHECKIN_KEY, s.lastCheckin || "");
+}
+
+function loadStateLocal() {
+  const todayStr = getTodayString();
+
+  // Backend is now the source of truth.
+  // Do NOT load balance/energy/today from localStorage anymore.
+  state.bal = 0;
+  state.energy = maxEnergy;
+  state.today = 0;
+  state.lastDay = todayStr;
+
+  // Keep ONLY streak data locally
+  const savedStreak = parseInt(localStorage.getItem(STREAK_DAYS_KEY) || "0", 10);
+  const savedLastCheckin = localStorage.getItem(LAST_CHECKIN_KEY) || "";
+
+  state.streakDays = isNaN(savedStreak) ? 0 : savedStreak;
+  state.lastCheckin = savedLastCheckin;
+}
+
+function findRank(bal) {
+  let current = rankConfig[0];
+  for (const r of rankConfig) {
+    if (bal >= r.min && bal < r.max) {
+      current = r;
+      break;
+    }
+    if (bal >= r.max) {
+      current = r;
+    }
+  }
+  return current;
+}
+
+// Global rank visuals (local + backend)
+function updateGlobalRankVisuals() {
+  if (!globalRankValueEl || !globalRankFillEl || !globalRankNextTextEl) return;
+
+  const balance = Math.max(0, Number(state.bal || 0));
+
+  const milestones = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+  let nextMilestone = milestones[milestones.length - 1];
+  for (const m of milestones) {
+    if (balance < m) {
+      nextMilestone = m;
+      break;
+    }
+  }
+
+  const hasBackendRank =
+    typeof state.globalRank === "number" &&
+    state.globalRank > 0 &&
+    typeof state.globalTotal === "number" &&
+    state.globalTotal > 0;
+
+  if (hasBackendRank) {
+    const rank = Math.max(1, Math.floor(state.globalRank));
+    const total = Math.max(rank, Math.floor(state.globalTotal));
+    globalRankValueEl.textContent = `#${formatNumber(rank)}`;
+
+    const percentile = 1 - rank / total;
+    const clamped = Math.max(0, Math.min(1, percentile));
+    globalRankFillEl.style.transform = `scaleX(${clamped})`;
+  } else {
+    const totalPlayersApprox = 1000000;
+    const cappedBalance = Math.max(0, Math.min(balance, totalPlayersApprox));
+    const percentile = 1 - cappedBalance / totalPlayersApprox;
+    const pseudoRank = Math.max(1, Math.round(percentile * totalPlayersApprox));
+    globalRankValueEl.textContent = `#${formatNumber(pseudoRank)}`;
+
+    const fill = Math.max(0, Math.min(1, balance / nextMilestone));
+    globalRankFillEl.style.transform = `scaleX(${fill})`;
+  }
+
+  if (balance === 0) {
+    globalRankNextTextEl.textContent = "Play to join the leaderboard";
+  } else if (balance >= milestones[milestones.length - 1]) {
+    globalRankNextTextEl.textContent = "You’re among the top players";
+  } else {
+    const diff = nextMilestone - balance;
+    globalRankNextTextEl.textContent = `+${formatNumber(diff)} pts to next milestone`;
+  }
+}
+
+function render() {
+  balanceText.textContent = formatNumber(state.bal);
+  todayText.textContent = formatNumber(state.today);
+
+  // Points per tap (x2 when boost active)
+  const effectivePerTap = state.doubleBoostActive ? perTapBase * 2 : perTapBase;
+  if (perTapText) {
+    perTapText.textContent = `+${effectivePerTap}`;
+  }
+
+  const energyPct = Math.max(0, Math.min(1, state.energy / maxEnergy));
+  const energyFill = document.getElementById("energyFill");
+  if (energyFill) {
+    energyFill.style.transform = `scaleX(${energyPct})`;
+  }
+  energyText.textContent = `${state.energy} / ${maxEnergy}`;
+
+  const rank = findRank(state.bal);
+  rankNameEl.textContent = rank.name;
+  rankPointsTextEl.textContent = formatNumber(state.bal);
+  const nextRankPoints = rank.max;
+  nextRankPointsTextEl.textContent = formatNumber(nextRankPoints);
+  const rankMetricPoints = document.getElementById("rankMetricPointsText");
+  if (rankMetricPoints) {
+    rankMetricPoints.textContent = formatNumber(state.bal);
+  }
+
+  let range = rank.max - rank.min;
+  if (range <= 0) range = 1;
+  const progress = Math.max(0, Math.min(1, (state.bal - rank.min) / range));
+  rankProgressFill.style.transform = `scaleX(${progress})`;
+
+  streakDaysText.textContent = `${state.streakDays} day${state.streakDays === 1 ? "" : "s"}`;
+  const streakPct = Math.max(0, Math.min(1, state.streakDays / 7));
+  streakMeterFill.style.width = `${Math.round(streakPct * 100)}%`;
+
+  friendsJoinedText.textContent = formatNumber(state.friendsJoined || 0);
+  referralPointsText.textContent = formatNumber(state.referralPoints || 0);
+  inviteLinkText.textContent = state.inviteLink || FALLBACK_REF_LINK;
+
+  withdrawBalanceText.textContent = formatNumber(state.bal);
+
+  // Global rank block
+  updateGlobalRankVisuals();
+  updateTaskCardStates();
+}
+
+
+function msToCountdown(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+function getStoredMs(key) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function setStoredMs(key, ms) {
+  localStorage.setItem(key, String(ms));
+}
+
+function updateTaskCardStates() {
+  // Daily check-in cooldown (UI only; backend will enforce once/day too)
+  const lastDaily = getStoredMs(DAILY_CLAIM_AT_KEY);
+  const now = Date.now();
+  const remaining = lastDaily ? Math.max(0, DAILY_COOLDOWN_MS - (now - lastDaily)) : 0;
+  const dailyCard = document.querySelector('.task-card[data-code="daily"]');
+
+  if (dailyRewardTextEl && dailyCard) {
+    if (remaining > 0) {
+      dailyRewardTextEl.textContent = `Claim in ${msToCountdown(remaining)}`;
+      dailyCard.classList.add("task-disabled");
+    } else {
+      dailyRewardTextEl.textContent = "+500 🌕";
+      dailyCard.classList.remove("task-disabled");
+    }
+  }
+
+  // VIP/Premium card is always available (no client-side disable)
+
+  // LOCAL_DOUBLE_EXPIRY: ensure UI turns off when boost time passes even if user doesn't refresh
+  if (state.doubleBoostUntil) {
+    const untilMs = Date.parse(state.doubleBoostUntil);
+    if (!isNaN(untilMs) && Date.now() > untilMs) {
+      state.doubleBoostActive = false;
+      state.doubleBoostUntil = null;
+      saveStateLocal(state);
+    }
+  }
+
+  // Double boost button: show active state
+  const doubleCard = document.querySelector('.task-card[data-code="double_boost"]');
+  if (doubleCard && doubleBoostRewardTextEl) {
+    if (state.doubleBoostActive) {
+      // Show countdown while active (10 mins)
+      let remainingMs = 0;
+      if (state.doubleBoostUntil) {
+        const untilMs = Date.parse(state.doubleBoostUntil);
+        if (!isNaN(untilMs)) remainingMs = Math.max(0, untilMs - Date.now());
+      }
+
+      doubleBoostRewardTextEl.textContent =
+        remainingMs > 0 ? `Active · ${msToCountdown(remainingMs)}` : "Active ✨";
+      doubleCard.classList.add("task-disabled");
+    } else {
+      doubleBoostRewardTextEl.textContent = "x2 · 10 mins";
+      doubleCard.classList.remove("task-disabled");
+    }
+  }
+
+  // Energy refill: disable if already full
+  const energyCard = document.querySelector('.task-card[data-code="boost_energy"]');
+  if (energyCard && energyRefillRewardTextEl) {
+    if ((state.energy || 0) >= maxEnergy) {
+      energyRefillRewardTextEl.textContent = "Full ✅";
+      energyCard.classList.add("task-disabled");
+    } else {
+      energyRefillRewardTextEl.textContent = "⚡ Full bar";
+      energyCard.classList.remove("task-disabled");
+    }
+  }
+}
+
+// keep task timers fresh
+setInterval(updateTaskCardStates, 1000);
+
+
+// 🔐 Centralised POST helper – now refuses to call backend with no Telegram info
+async function apiPost(path, body, opts = {}) {
+  // Always read Telegram auth dynamically (iOS can populate initData slightly late).
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  let initData = "";
+  let telegram_id = null;
+
+  // Cache Telegram auth once we see it. This is important for iOS Telegram WebViews:
+  // during pagehide/visibilitychange the WebView may stop executing quickly, so we
+  // must be able to send a final save using cached auth without waiting.
+  window.__tgAuthCache = window.__tgAuthCache || { initData: "", telegram_id: null };
+
+  // Fast-path for keepalive/background flushes: do not sleep/retry here.
+  if (opts.fastAuth || opts.keepalive) {
+    try {
+      const cached = window.__tgAuthCache || {};
+      initData = cached.initData || "";
+      telegram_id = cached.telegram_id || null;
+      if (!telegram_id) telegram_id = localStorage.getItem("telegram_id") || null;
+    } catch (e) {}
+  }
+
+  const maxTries = (opts.fastAuth || opts.keepalive) ? 1 : 8;
+  for (let i = 0; i < maxTries; i++) {
+    const tgNow = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    initData = tgNow && tgNow.initData ? tgNow.initData : "";
+    telegram_id =
+      (tgNow && tgNow.initDataUnsafe && tgNow.initDataUnsafe.user && tgNow.initDataUnsafe.user.id)
+        ? tgNow.initDataUnsafe.user.id
+        : null;
+
+    if (!telegram_id) {
+      try {
+        telegram_id = localStorage.getItem("telegram_id") || null;
+      } catch (e) {}
+    }
+
+    if (telegram_id) {
+      try { localStorage.setItem("telegram_id", String(telegram_id)); } catch (e) {}
+    }
+
+    // Update cache if we got anything.
+    if (initData) window.__tgAuthCache.initData = initData;
+    if (telegram_id) window.__tgAuthCache.telegram_id = telegram_id;
+
+    if (initData || telegram_id) break;
+    // give Telegram a moment to populate initData on iOS
+    if (!(opts.fastAuth || opts.keepalive)) await sleep(150);
+  }
+
+  if (!initData && !telegram_id) {
+    console.warn("No Telegram auth data – open inside Telegram mini app.");
+    if (!opts.silent) showToast("Open from Telegram to save your progress.");
+    // We still continue (read-only UI can load), but backend will treat as new/anon.
+  }
+
+  try {
+    const res = await fetch(API_BASE + path, {
+      method: "POST",
+      keepalive: !!opts.keepalive,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        initData: initData || "",
+        telegram_id: telegram_id,
+        client: getClientSignals(),
+        ...body,
+      }),
+    });
+
+    const data = await res.json().catch(() => null);
+    return data || { ok: false, reason: "BAD_RESPONSE" };
+  } catch (err) {
+    console.error("API error", err);
+    if (!opts.silent) showToast("Network error – retrying...");
+    return { ok: false, reason: "NETWORK", details: String(err || "") };
+  }
+}
+
+
+
+
+async function loadReferralStatus() {
+  // optional endpoint; safe if backend hasn't enabled it
+  const res = await apiPost("/api/referral/status", {});
+  if (!res || !res.ok) return;
+
+  const tierName = res.tier_name || `Tier ${res.tier || 1}`;
+  const cur = Number(res.current || res.referrals || 0);
+  const nextAt = Number(res.next_at || res.next_threshold || 0);
+  const prevAt = Number(res.prev_at || res.prev_threshold || 0);
+  const pct = nextAt > prevAt ? Math.max(0, Math.min(1, (cur - prevAt) / (nextAt - prevAt))) : 1;
+
+  const pill = document.getElementById("refTierPill");
+  const meta = document.getElementById("refTierMeta");
+  const next = document.getElementById("refTierNext");
+  const fill = document.getElementById("refTierFill");
+
+  if (pill) pill.textContent = tierName;
+  if (meta) meta.textContent = `${cur.toLocaleString("en-GB")} referrals · multiplier ${res.multiplier || "1.0"}x`;
+  if (next) next.textContent = nextAt ? `Next tier at ${nextAt.toLocaleString("en-GB")} referrals` : "Max tier reached";
+  if (fill) fill.style.width = `${Math.round(pct * 100)}%`;
+
+  // Social proof (optional fields from backend)
+  const joinedToday = document.getElementById("joinedTodayText");
+  const topInviter = document.getElementById("topInviterText");
+  if (joinedToday) joinedToday.textContent = (res.joined_today != null) ? Number(res.joined_today).toLocaleString("en-GB") : "—";
+  if (topInviter) topInviter.textContent = res.top_inviter ? String(res.top_inviter) : "—";
+
+  // Refresh share card after we have latest state/tier
+  renderShareCardCanvas();
+}
+
+function buildShareText() {
+  const bal = Number(state.balance || 0);
+  const streak = Number(state.streakDays || 0);
+  const rank = (document.getElementById("rankName") && document.getElementById("rankName").textContent) ? document.getElementById("rankName").textContent : "Recruit";
+  const link = (inviteLinkText && inviteLinkText.textContent) ? inviteLinkText.textContent.trim() : FALLBACK_REF_LINK;
+  return `I’m farming JigCoin 🪙
+Balance: ${bal.toLocaleString("en-GB")}
+Rank: ${rank} · Streak: ${streak}d
+Join here: ${link}`;
+}
+
+function renderShareCardCanvas() {
+  const c = document.getElementById("shareCardCanvas");
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  if (!ctx) return;
+
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, "rgba(236, 72, 153, 0.95)");
+  g.addColorStop(0.55, "rgba(59, 130, 246, 0.9)");
+  g.addColorStop(1, "rgba(15, 23, 42, 0.98)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = "rgba(2, 6, 23, 0.35)";
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = "rgba(248,250,252,0.95)";
+  ctx.font = "900 48px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText("JigCoin", 52, 92);
+
+  ctx.fillStyle = "rgba(226,232,240,0.9)";
+  ctx.font = "600 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText("Tap · Quests · Invite friends", 52, 132);
+
+  const bal = Number(state.balance || 0);
+  const today = Number(state.today || 0);
+  const streak = Number(state.streakDays || 0);
+  const rank = (document.getElementById("rankName") && document.getElementById("rankName").textContent) ? document.getElementById("rankName").textContent : "Recruit";
+
+  ctx.font = "900 70px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillStyle = "rgba(248,250,252,0.98)";
+  ctx.fillText(bal.toLocaleString("en-GB"), 52, 230);
+
+  ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillStyle = "rgba(226,232,240,0.92)";
+  ctx.fillText("balance", 52, 260);
+
+  const pillY = 305;
+  const pills = [
+    { label: "Rank", value: rank },
+    { label: "Today", value: today.toLocaleString("en-GB") },
+    { label: "Streak", value: `${streak} days` },
+  ];
+
+  let x = 52;
+  pills.forEach((p) => {
+    const w = Math.max(210, ctx.measureText(p.value).width + 110);
+    ctx.fillStyle = "rgba(2,6,23,0.42)";
+    roundRect(ctx, x, pillY, w, 74, 22);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(148,163,184,0.22)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(148,163,184,0.9)";
+    ctx.font = "700 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(p.label.toUpperCase(), x + 18, pillY + 28);
+
+    ctx.fillStyle = "rgba(248,250,252,0.95)";
+    ctx.font = "800 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(p.value, x + 18, pillY + 58);
+
+    x += w + 14;
+  });
+
+  const link = (inviteLinkText && inviteLinkText.textContent) ? inviteLinkText.textContent.trim() : FALLBACK_REF_LINK;
+  ctx.fillStyle = "rgba(226,232,240,0.95)";
+  ctx.font = "700 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText("Join:", 52, 485);
+
+  ctx.fillStyle = "rgba(248,250,252,0.95)";
+  ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  const maxChars = 44;
+  const safeLink = link.length > maxChars ? (link.slice(0, maxChars - 1) + "…") : link;
+  ctx.fillText(safeLink, 120, 485);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+  return ctx;
+}
+
+async function loadWithdrawReadiness() {
+  const minBalance = document.getElementById("wlMinBalance");
+  const minBalanceSub = document.getElementById("wlMinBalanceSub");
+  const sponsorReq = document.getElementById("wlSponsorReq");
+  const sponsorReqSub = document.getElementById("wlSponsorReqSub");
+  const accountAge = document.getElementById("wlAccountAge");
+  const accountAgeSub = document.getElementById("wlAccountAgeSub");
+  const risk = document.getElementById("wlRisk");
+  const riskSub = document.getElementById("wlRiskSub");
+
+  const curBal = Number(state.balance || 0);
+  const baselineMin = 5000;
+
+  const passBal = curBal >= baselineMin;
+  if (minBalance) minBalance.className = `check-item ${passBal ? "good" : "warn"}`;
+  if (minBalanceSub) minBalanceSub.textContent = passBal ? `Pass · ${baselineMin.toLocaleString("en-GB")} min` : `Need ${baselineMin.toLocaleString("en-GB")} points`;
+
+  if (sponsorReqSub) sponsorReqSub.textContent = "Backend rule not loaded yet";
+  if (accountAgeSub) accountAgeSub.textContent = "Backend rule not loaded yet";
+  if (riskSub) riskSub.textContent = "Backend rule not loaded yet";
+
+  try {
+    const res = await apiPost("/api/withdraw/status", {});
+    if (!res || !res.ok) return;
+
+    const applyCheck = (el, subEl, ok, txt) => {
+      if (el) el.className = `check-item ${ok ? "good" : "warn"}`;
+      if (subEl) subEl.textContent = txt || (ok ? "Pass" : "Not met");
+    };
+
+    if (res.requirements) {
+      const r = res.requirements;
+      if (r.min_balance) applyCheck(minBalance, minBalanceSub, !!r.min_balance.ok, r.min_balance.text);
+      if (r.sponsor) applyCheck(sponsorReq, sponsorReqSub, !!r.sponsor.ok, r.sponsor.text);
+      if (r.account_age) applyCheck(accountAge, accountAgeSub, !!r.account_age.ok, r.account_age.text);
+      if (r.risk) applyCheck(risk, riskSub, !!r.risk.ok, r.risk.text);
+    }
+
+    const feed = document.getElementById("recentPayouts");
+    if (feed && Array.isArray(res.recent_payouts)) {
+      feed.innerHTML = "";
+      if (!res.recent_payouts.length) {
+        feed.innerHTML = '<div class="payout-row"><span>—</span><span class="payout-muted">No payouts yet</span></div>';
+      } else {
+        res.recent_payouts.slice(0, 6).forEach((p) => {
+          const amt = (p.amount != null) ? Number(p.amount).toLocaleString("en-GB") : "—";
+          const when = p.when ? String(p.when) : "";
+          const proof = p.proof ? String(p.proof) : "";
+          const row = document.createElement("div");
+          row.className = "payout-row";
+          row.innerHTML = `<span>Paid ${amt}</span><span class="payout-muted">${proof || when || ""}</span>`;
+          feed.appendChild(row);
+        });
+      }
+    }
+  } catch (e) {}
+}
+
+
+async function loadEventsAndSeason() {
+  const banner = document.getElementById("eventBanner");
+  const title = document.getElementById("eventTitle");
+  const sub = document.getElementById("eventSub");
+  const seasonPill = document.getElementById("seasonPill");
+
+  // Season (optional from /api/state)
+  if (window.__lastState && window.__lastState.season_name && seasonPill) {
+    seasonPill.textContent = window.__lastState.season_name;
+  }
+
+  // Events (optional endpoint)
+  try {
+    const res = await apiPost("/api/events/active", {});
+    if (res && res.ok && Array.isArray(res.events) && res.events.length) {
+      const ev = res.events[0];
+      if (title) title.textContent = ev.title || "Live event";
+      if (sub) sub.textContent = ev.subtitle || ev.description || "Boosted rewards are active.";
+      if (seasonPill) seasonPill.textContent = ev.season_name || seasonPill.textContent || "Season";
+      if (banner) banner.classList.add("show");
+    } else {
+      if (banner) banner.classList.remove("show");
+    }
+  } catch (e) {
+    if (banner) banner.classList.remove("show");
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Render deployments can "cold start" which makes the first few requests slow.
+// If the first state fetch fails or times out, retry automatically so the user
+// doesn't have to close/re-open the mini app.
+async function refreshState(attempt = 0) {
+  const res = await apiPost("/api/state", {});
+
+  if (res && res.ok) {
+    window.__lastState = res;
+    applyBackendState(res);
+    return res;
+  }
+
+  const reason = (res && (res.reason || res.error)) || "Failed to load state";
+  console.warn("refreshState failed", { attempt, reason, res });
+
+  // Retry a few times for transient conditions.
+  const transient = reason === "NETWORK" || reason === "NO_TELEGRAM_ID";
+  if (transient && attempt < 6) {
+    const delay = Math.min(8000, 500 * Math.pow(2, attempt));
+    await sleep(delay);
+    return refreshState(attempt + 1);
+  }
+
+  // Only toast once we've exhausted retries.
+  showToast(reason);
+  return res;
+}
+
+function setupWithdrawRequest() {
+  const btn = document.getElementById("withdrawRequestBtn");
+  const amt = document.getElementById("withdrawAmount");
+  const addr = document.getElementById("withdrawAddress");
+  if (!btn || !amt || !addr) return;
+
+  btn.addEventListener("click", async () => {
+    const amount = Number(amt.value || "0");
+    const address = (addr.value || "").trim();
+    if (!amount || amount <= 0) {
+      showToast("Enter an amount");
+      return;
+    }
+    if (!address || address.length < 6) {
+      showToast("Enter a valid address");
+      return;
+    }
+    btn.disabled = true;
+    const res = await apiPost("/api/withdraw/request", { amount, address });
+    btn.disabled = false;
+
+    if (res && res.ok) {
+      showToast("Withdraw request submitted");
+      amt.value = "";
+      addr.value = "";
+      // refresh state so balance updates if backend reserves funds
+      await refreshState();
+      return;
+    }
+    if (res && res.error) {
+      showToast(res.error.replaceAll("_", " ").toLowerCase());
+    } else {
+      showToast("Could not submit request");
+    }
+  });
+}
+
+
+
+// --- Energy smoothing (UI-only): prevents big regen jumps when /api/state arrives late ---
+// Server remains source of truth; we just step the UI toward the latest target energy at a controlled pace.
+// Fast 0–10, medium 10–30, slow 30–50 (~1–2 min total). Pauses while tapping / while taps are queued.
+function __energyStepInterval(nextEnergy) {
+  if (nextEnergy < 10) return 300;   // fast
+  if (nextEnergy < 30) return 1500;  // medium
+  return 2500;                       // slow
+}
+function __startEnergyAnimator() {
+  if (window.__energyAnimTimer) return;
+  const tick = () => {
+    window.__energyAnimTimer = null;
+
+    const now = Date.now();
+    const active = (now - (window.__lastTapAt || 0) < 1200) || (typeof getPendingTaps === "function" && getPendingTaps() > 0);
+    if (active) return; // don't regen while active tapping / pending taps
+
+    const target = (typeof window.__energyTarget === "number") ? window.__energyTarget : null;
+    if (target == null) return;
+
+    const cur = (typeof state.energy === "number") ? state.energy : 0;
+    if (cur >= target) return;
+
+    state.energy = cur + 1;
+    render();
+
+    const delay = __energyStepInterval(state.energy);
+    window.__energyAnimTimer = setTimeout(tick, delay);
+  };
+  // kick immediately
+  window.__energyAnimTimer = setTimeout(tick, 0);
+}
+// --- end energy smoothing ---
+function applyBackendState(data) {
+  if (!data || !data.ok) return;
+
+  // Reconciliation rules:
+  // - While actively tapping or while there are queued (unflushed) taps, never let
+  //   a stale /api/state response roll back the optimistic UI.
+  // - Energy must never increase during active tapping (regen is for idle time).
+  const now = Date.now();
+  const activeTapping = now - (window.__lastTapAt || 0) < 1200;
+  const pending = (typeof getPendingTaps === "function") ? getPendingTaps() : 0;
+  const allowDecrease = !!window.__allowBalanceDecreaseOnce; // e.g. refill spend
+  if (allowDecrease) window.__allowBalanceDecreaseOnce = false;
+
+  // When we optimistically SPEND points (e.g. boosts), the backend response
+  // can occasionally return a stale pre-spend balance (higher than current).
+  // Without guarding, that would immediately "refund" the optimistic UI.
+  // __balanceCeilOnce clamps ONE incoming balance update to a maximum value.
+  const balanceCeilOnce = (typeof window.__balanceCeilOnce === "number") ? window.__balanceCeilOnce : null;
+  if (balanceCeilOnce !== null) window.__balanceCeilOnce = null;
+
+  if (typeof data.balance === "number") {
+  let incoming = data.balance;
+  const current = (typeof state.bal === "number") ? state.bal : 0;
+
+  if (balanceCeilOnce !== null && incoming > balanceCeilOnce) {
+    incoming = balanceCeilOnce;
+  }
+
+  // **Monotonic balance rule (industrial tap games):**
+  // Never allow balance to go DOWN unless we explicitly performed a spend action.
+  if (incoming < current && !allowDecrease) {
+    // ignore
+  } else {
+    state.bal = incoming;
+  }
+}
+
+  if (typeof data.today === "number") {
+  const incoming = data.today;
+  const current = (typeof state.today === "number") ? state.today : 0;
+
+  // Never allow Today to go DOWN unless it was a spend/reset action.
+  if (incoming < current && !allowDecrease) {
+    // ignore
+  } else {
+    state.today = incoming;
+  }
+}
+
+  if (typeof data.energy === "number") {
+    const incoming = data.energy;
+    const current = (typeof state.energy === "number") ? state.energy : 0;
+
+    // While actively tapping (or with queued taps), never allow energy to increase.
+    if ((pending > 0 || activeTapping) && incoming > current) {
+      window.__energyTarget = Math.min(incoming, current);
+    } else {
+      // Accept decreases immediately (spent energy), but smooth increases while idle.
+      if (incoming < current) {
+        state.energy = incoming;
+      }
+      window.__energyTarget = incoming;
+      __startEnergyAnimator();
+    }
+  }
+
+  if (typeof data.referrals_count === "number") {
+    state.friendsJoined = data.referrals_count;
+  }
+  if (typeof data.referrals_points === "number") {
+    state.referralPoints = data.referrals_points;
+  }
+
+  if (typeof data.global_rank === "number") {
+    state.globalRank = data.global_rank;
+  }
+
+  if (typeof data.global_total === "number") {
+    state.globalTotal = data.global_total;
+  }
+
+  // Double boost flags from backend
+  if (typeof data.double_boost_active === "boolean") {
+    state.doubleBoostActive = data.double_boost_active;
+  }
+  if (data.double_boost_until) {
+    state.doubleBoostUntil = data.double_boost_until;
+  }
+
+  if (data.invite_link) {
+    state.inviteLink = data.invite_link;
+  }
+
+  saveStateLocal(state);
+}
+
+async function initFromBackend() {
+  const res = await refreshState(6);
+  // Always render at least once so the UI doesn't look "frozen" if the
+  // first request fails.
+  render();
+  updateTaskCardStates();
+
+  // upgrades: load tier + events, wire withdraw request
+  loadReferralStatus();
+  loadEventsAndSeason();
+  setupWithdrawRequest();
+
+  // Keep the UI in sync even if the app sits open for a while.
+  clearInterval(window.__statePollInterval);
+  window.__statePollInterval = setInterval(() => refreshState(3), 20000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshState(3);
+  });
+}
+
+
+// =============================
+// Tap loop (industrial-safe)
+// - pointerdown for Telegram iOS
+// - persistent pending tap queue (never drop taps on transient failures)
+// - batch flush via /api/tapPacket
+// =============================
+const PENDING_TAPS_KEY = "ae_pending_taps";
+function getPendingTaps() {
+  const n = Number(localStorage.getItem(PENDING_TAPS_KEY) || "0");
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+function setPendingTaps(n) {
+  const v = Math.max(0, Math.floor(Number(n) || 0));
+  localStorage.setItem(PENDING_TAPS_KEY, String(v));
+  window.__pendingTapCount = v; // for quick debugging if needed
+}
+
+const TAP_QUEUE_KEY = "ae_tap_packet_queue_v1";
+function safeParseJSON(str, fallback) {
+  try {
+    const v = JSON.parse(str);
+    return v === null || v === undefined ? fallback : v;
+  } catch (e) {
+    return fallback;
+  }
+}
+function getTapQueue() {
+  const raw = localStorage.getItem(TAP_QUEUE_KEY) || "[]";
+  const q = safeParseJSON(raw, []);
+  return Array.isArray(q) ? q : [];
+}
+function setTapQueue(q) {
+  localStorage.setItem(TAP_QUEUE_KEY, JSON.stringify(Array.isArray(q) ? q : []));
+}
+function makePacketId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+  // Fallback: not cryptographically strong, but good enough for idempotency keys.
+  return "pkt_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
+}
+
+let __tapFlushTimer = null;
+let __tapRetryTimer = null;
+let __tapFlushing = false;
+let __lastPointerTapAt = 0;
+
+function scheduleTapFlush(delayMs = 180) {
+  if (__tapFlushTimer) return;
+  __tapFlushTimer = setTimeout(() => {
+    __tapFlushTimer = null;
+    flushPendingTaps();
+  }, delayMs);
+}
+
+function scheduleTapRetry(delayMs = 800) {
+  if (__tapRetryTimer) return;
+  __tapRetryTimer = setTimeout(() => {
+    __tapRetryTimer = null;
+    flushPendingTaps();
+  }, delayMs);
+}
+
+async function flushPendingTaps(opts = {}) {
+  if (__tapFlushing) {
+    scheduleTapFlush(220);
+    return;
+  }
+
+  let pending = getPendingTaps();
+  let queue = getTapQueue();
+  if (!pending && queue.length === 0) return;
+
+  __tapFlushing = true;
+  try {
+    // If we already have queued packets (e.g., after iOS WebView close), send those first.
+    if (queue.length === 0 && pending > 0) {
+      const chunk = Math.max(1, Math.min(20, pending));
+      queue = [{ packet_id: makePacketId(), count: chunk, created_at: Date.now() }];
+      setTapQueue(queue);
+    }
+
+    if (queue.length === 0) return;
+
+    const pkt = queue[0];
+    const chunk = Math.max(1, Math.floor(Number(pkt.count) || 0));
+
+    const res = await apiPost(
+      "/api/tapPacket",
+      { packet_id: pkt.packet_id, count: chunk },
+      { silent: true, keepalive: !!opts.keepalive, useBeacon: !!opts.useBeacon }
+    );
+
+// If server applied fewer taps than we sent (e.g. energy ran out),
+// roll back the optimistic UI for the rejected taps so balance/energy never "snap" later.
+const applied = (res && typeof res.applied === "number") ? res.applied : chunk;
+const rejected = Math.max(0, chunk - applied);
+if (rejected > 0) {
+      window.__allowBalanceDecreaseOnce = true;
+  const perTapNow = state.doubleBoostActive ? perTapBase * 2 : perTapBase;
+  state.bal = Math.max(0, (state.bal || 0) - rejected * perTapNow);
+  state.today = Math.max(0, (state.today || 0) - rejected * perTapNow);
+  state.energy = Math.min(maxEnergy, (state.energy || 0) + rejected);
+}
+
+
+    // If we used sendBeacon, we cannot rely on an immediate response.
+    // Keep the packet in the queue; it will be retried on next open.
+    if (opts.useBeacon) {
+      return;
+    }
+
+    // If Telegram auth missing, do nothing (keeps queue, user will reopen inside Telegram).
+    if (!res || res.reason === "NO_TELEGRAM_ID") {
+      scheduleTapRetry(1000);
+      return;
+    }
+
+    // Rate limit: keep queue and retry shortly.
+    const err = res && (res.error || res.reason);
+    if (err === "TAP_RATE_LIMIT" || err === "RATE_LIMIT") {
+      scheduleTapRetry(900);
+      return;
+    }
+
+    // No energy / daily cap: server returns state; clear queue (can't apply).
+    if (res && res.ok === false && (res.reason === "NO_ENERGY" || res.reason === "MAX_TAPS_REACHED")) {
+      setPendingTaps(0);
+      setTapQueue([]);
+      applyBackendState(res);
+      render();
+      return;
+    }
+
+    // Other backend failure: keep queue and retry; also re-sync state quietly.
+    if (!res || res.ok !== true) {
+      refreshState(2);
+      scheduleTapRetry(900);
+      return;
+    }
+
+    // Success (or duplicate): remove the packet from the queue, subtract the chunk we sent
+    queue = getTapQueue();
+    if (queue.length && queue[0] && queue[0].packet_id === pkt.packet_id) {
+      queue.shift();
+      setTapQueue(queue);
+    }
+    pending = getPendingTaps();
+    setPendingTaps(Math.max(0, pending - chunk));
+    applyBackendState(res);
+    render();
+
+    // If there's more queued, continue flushing quickly.
+    if (getTapQueue().length > 0 || getPendingTaps() > 0) scheduleTapFlush(60);
+  } catch (e) {
+    // Network error: keep queue and retry.
+    scheduleTapRetry(900);
+  } finally {
+    __tapFlushing = false;
+  }
+}
+
+function onTapPress(ev) {
+  // Prevent ghost clicks / double-fire on iOS.
+  const now = Date.now();
+  if (ev && ev.type === "click" && now - __lastPointerTapAt < 450) return;
+
+  if (state.energy <= 0) {
+    showToast("⚡ Out of energy – come back later.");
+    return;
+  }
+
+  // Mark as active tapping (used by backend/client-side regen rules)
+  window.__lastTapAt = now;
+
+  // Queue tap first (never lose it)
+  setPendingTaps(getPendingTaps() + 1);
+
+  // Optimistic UI update for responsiveness
+  const perTap = state.doubleBoostActive ? perTapBase * 2 : perTapBase;
+  state.energy = Math.max(0, (state.energy || 0) - 1);
+  state.bal = (state.bal || 0) + perTap;
+  state.today = (state.today || 0) + perTap;
+  render();
+
+  // If we hit 0 energy, flush immediately; otherwise debounce.
+  if (state.energy <= 0) {
+    flushPendingTaps();
+  } else {
+    scheduleTapFlush(80);
+  }
+}
+
+// Use pointerdown for iOS Telegram webview; keep click as fallback.
+tapBtn.addEventListener("pointerdown", (ev) => {
+  __lastPointerTapAt = Date.now();
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  onTapPress(ev);
+}, { passive: false });
+
+tapBtn.addEventListener("click", (ev) => {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  onTapPress(ev);
+}, { passive: false });
+
+// -------- Exit-safe save --------
+// iOS Telegram WebView may kill timers/fetch quickly on background/close.
+// We use sendBeacon for a *best-effort* final flush, then fall back to keepalive fetch.
+function beaconFlushPendingTaps(maxChunks = 6) {
+  try {
+    if (!navigator.sendBeacon) return false;
+    let pending = getPendingTaps();
+    if (!pending) return true;
+
+    // Use cached Telegram auth immediately (no waits).
+    const cached = (window.__tgAuthCache || {});
+    let initData = cached.initData || "";
+    let telegram_id = cached.telegram_id || null;
+    try {
+      if (!telegram_id) telegram_id = localStorage.getItem("telegram_id") || null;
+    } catch (e) {}
+
+    // If we have no Telegram identity, we can't safely save.
+    if (!telegram_id && !initData) return false;
+
+    // Move pending taps into durable packet queue first, then beacon-send them best-effort.
+    let queue = getTapQueue();
+    let sentTotal = 0;
+    for (let i = 0; i < maxChunks && pending > 0; i++) {
+      const chunk = Math.max(1, Math.min(25, pending));
+      const packet = { packet_id: genPacketId(), count: chunk, created_at: Date.now() };
+      queue.push(packet);
+
+      const payload = {
+        initData: initData || "",
+        telegram_id: telegram_id,
+        client: getClientSignals(),
+        packet_id: packet.packet_id,
+        count: packet.count,
+      };
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      navigator.sendBeacon(API_BASE + "/api/tapPacket", blob);
+
+      sentTotal += packet.count;
+
+      pending -= chunk;
+    }
+
+    setTapQueue(queue);
+    setPendingTaps(pending);
+    return sentTotal > 0;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Flush queued taps when the app is backgrounded/closed
+window.addEventListener("pagehide", () => {
+  const didBeacon = beaconFlushPendingTaps();
+  // Fallback keepalive fetch (may still run on some devices)
+  if (!didBeacon) flushPendingTaps({ keepalive: true, fastAuth: true });
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    const didBeacon = beaconFlushPendingTaps();
+    if (!didBeacon) flushPendingTaps({ keepalive: true, fastAuth: true });
+  }
+});
+
+
+async function handleDailyTask(reward) {
+  // UI cooldown guard (backend should enforce too)
+  const lastDaily = getStoredMs(DAILY_CLAIM_AT_KEY);
+  const now = Date.now();
+  if (lastDaily && now - lastDaily < DAILY_COOLDOWN_MS) {
+    const remaining = DAILY_COOLDOWN_MS - (now - lastDaily);
+    showToast(`Daily already claimed. Try again in ${msToCountdown(remaining)}.`);
+    updateTaskCardStates();
+    return;
+  }
+
+  const res = await apiPost("/api/task", { taskName: "daily", reward });
+
+  if (!res) return;
+
+  if (!res.ok) {
+    if (res.reason !== "NO_TELEGRAM_ID") {
+      // If backend sends cooldown info, sync UI cooldown to match
+      const remainingSec = Number(res.next_claim_in_seconds || 0);
+      const nextAtIso = res.next_claim_at || null;
+
+      if (Number.isFinite(remainingSec) && remainingSec > 0) {
+        const remainingMs = remainingSec * 1000;
+        // Back-calculate an accurate "claimed at" so the local 24h timer matches the server
+        const claimedAt = Date.now() - (DAILY_COOLDOWN_MS - remainingMs);
+        setStoredMs(DAILY_CLAIM_AT_KEY, claimedAt);
+        showToast(`Daily already claimed. Try again in ${msToCountdown(remainingMs)}.`);
+        updateTaskCardStates();
+        return;
+      }
+
+      if (nextAtIso) {
+        const nextAtMs = Date.parse(nextAtIso);
+        if (!isNaN(nextAtMs)) {
+          const remainingMs2 = Math.max(0, nextAtMs - Date.now());
+          const claimedAt2 = Date.now() - (DAILY_COOLDOWN_MS - remainingMs2);
+          setStoredMs(DAILY_CLAIM_AT_KEY, claimedAt2);
+          showToast(`Daily already claimed. Try again in ${msToCountdown(remainingMs2)}.`);
+          updateTaskCardStates();
+          return;
+        }
+      }
+      showToast("Daily task already claimed or error.");
+    }
+    return;
+  }
+
+  // Mark claimed locally so the UI doesn't keep offering it
+  setStoredMs(DAILY_CLAIM_AT_KEY, Date.now());
+
+  applyBackendState(res);
+  render();
+  updateTaskCardStates();
+
+  showToast(`+${reward.toLocaleString("en-GB")} daily bonus added`);
+}
+
+
+// ---- Sponsor / mission link helpers (pre-fetch URLs so link opens instantly on tap) ----
+window.__missionUrlMap = window.__missionUrlMap || {};
+
+function getMissionUrl(code) {
+  if (!code) return null;
+  return (window.__missionUrlMap && window.__missionUrlMap[code]) ? window.__missionUrlMap[code] : null;
+}
+
+function openExternalLink(url) {
+  if (!url) return false;
+
+  try {
+    if (window.Telegram && Telegram.WebApp && typeof Telegram.WebApp.openLink === "function") {
+      // Telegram iOS webview can be strict about how links are opened.
+      // Disable Instant View and let Telegram open it as an external link.
+      Telegram.WebApp.openLink(url, { try_instant_view: false });
+      return true;
+    }
+  } catch (e) {}
+
+  try {
+    // Prefer same-window navigation as a hard fallback (works even when popups are blocked).
+    window.location.assign(url);
+    return true;
+  } catch (e) {
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return true;
+    } catch (e2) {
+      return false;
+    }
+  }
+}
+
+async function prefetchMissionUrls() {
+  // Pull sponsor missions INCLUDING the 2 boost sponsor missions, so we always have URLs ready
+  const res = await apiPost("/api/mission/list", { kind: "sponsor", include_boost_sponsor_missions: true });
+  if (!res || !res.ok || !Array.isArray(res.missions)) return;
+
+  res.missions.forEach((m) => {
+    if (m && m.code && m.url) {
+      window.__missionUrlMap[m.code] = m.url;
+    }
+  });
+}
+
+// ⭐ VIP Pass (Stripe-first)
+// NOTE: We no longer sell VIP for in-game points; VIP is purchased via Stripe.
+let __vipProductCache = null;
+let __vipProductLastFetch = 0;
+
+async function getVipProduct(force = false) {
+  const now = Date.now();
+  if (!force && __vipProductCache && (now - __vipProductLastFetch) < 60_000) {
+    return __vipProductCache;
+  }
+  const res = await apiPost("/api/vip/product", {});
+  if (res && res.ok && res.product) {
+    __vipProductCache = res.product;
+    __vipProductLastFetch = now;
+    return __vipProductCache;
+  }
+  // If backend doesn't have VIP configured yet, return null.
+  __vipProductCache = null;
+  __vipProductLastFetch = now;
+  return null;
+}
+
+function openVipSheet() {
+  sheetBackdrop.classList.add("show");
+  vipSheet.classList.add("show");
+  setActiveTab(tabTasks);
+}
+
+function closeVipSheet() {
+  vipSheet.classList.remove("show");
+
+  // Only hide the backdrop if no other sheets are open
+  const anyOtherOpen =
+    (sponsorSheet && sponsorSheet.classList.contains("show")) ||
+    (coinShopSheet && coinShopSheet.classList.contains("show")) ||
+    (friendsSheet && friendsSheet.classList.contains("show")) ||
+    (withdrawSheet && withdrawSheet.classList.contains("show"));
+
+  if (!anyOtherOpen) {
+    sheetBackdrop.classList.remove("show");
+  }
+}
+
+// 🛒 Coin shop (Stripe packs)
+function openCoinShopSheet() {
+  sheetBackdrop.classList.add("show");
+  coinShopSheet.classList.add("show");
+  setActiveTab(tabTasks);
+  loadCoinPacks();
+}
+
+function closeCoinShopSheet() {
+  coinShopSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+}
+
+// Packs: backend-driven (Supabase) with safe frontend fallback
+const FALLBACK_COIN_PACKS = [
+  { coins: 5000, bonus_coins: 0, price_gbp: 5, stripe_payment_link: "https://buy.stripe.com/test_14AfZi4xjdbg4Uc8nP6wE01" },
+  { coins: 10000, bonus_coins: 1000, price_gbp: 10, stripe_payment_link: "https://buy.stripe.com/test_7sY5kE3tf2wC5Yg47z6wE02" },
+  { coins: 25000, bonus_coins: 5000, price_gbp: 25, stripe_payment_link: "https://buy.stripe.com/test_14A9AUaVH6MS0DW7jL6wE03" },
+  { coins: 50000, bonus_coins: 15000, price_gbp: 50, stripe_payment_link: "https://buy.stripe.com/test_aFa9AU3tf4EK3Q80Vn6wE04" },
+  { coins: 100000, bonus_coins: 40000, price_gbp: 100, stripe_payment_link: "https://buy.stripe.com/test_cNi28s5Bnc7c9as1Zr6wE05" },
+  { coins: 250000, bonus_coins: 130000, price_gbp: 250, stripe_payment_link: "https://buy.stripe.com/test_5kQ28s7Jv1sydqIgUl6wE06" },
+  { coins: 500000, bonus_coins: 350000, price_gbp: 500, stripe_payment_link: "https://buy.stripe.com/test_00w9AU9RD5IO2M40Vn6wE07" },
+  { coins: 1000000, bonus_coins: 1000000, price_gbp: 1000, stripe_payment_link: "https://buy.stripe.com/test_7sYbJ2aVH6MS9ascE56wE08" },
+];
+
+function getPackNumbers(p) {
+  const base = Number(p.coins ?? p.base_coins ?? p.coin_amount ?? 0);
+  const bonus = Number(p.bonus_coins ?? p.bonus ?? 0);
+  const total = base + bonus;
+  const price = Number(p.price_gbp ?? p.price ?? 0);
+  return { base, bonus, total, price };
+}
+
+function formatGBP(amount) {
+  // keep it simple and familiar for UK users
+  return "£" + Number(amount).toLocaleString("en-GB");
+}
+
+function packMicrocopy(total, price) {
+  // Unique, defensive, status-driven copy per tier (no “buy/pay/purchase”).
+  if (price >= 1000) return { name: "Apex Insurance", sub: "You don’t compete — you control the season.", hook: "Lock the top spots before everyone wakes up." };
+  if (price >= 500)  return { name: "Dominance Engine", sub: "Build an unbreakable lead in one move.", hook: "This is how whales stay untouchable." };
+  if (price >= 250)  return { name: "Leader Guard", sub: "Stop rank snipers and protect your momentum.", hook: "Secure the climb before the next wave hits." };
+  if (price >= 100)  return { name: "Streak Armor", sub: "Keep your streak alive and your rank defended.", hook: "One shield now beats a grind later." };
+  if (price >= 50)   return { name: "Momentum Lock", sub: "Hold your position when the leaderboard spikes.", hook: "Don’t let one slow hour cost you." };
+  if (price >= 25)   return { name: "Rank Shield", sub: "Stay ahead of the pack while they hesitate.", hook: "Activate protection and keep farming." };
+  if (price >= 10)   return { name: "Quick Patch", sub: "Instant fuel to keep your run alive right now.", hook: "Small move. Big difference." };
+  return               { name: "Starter Boost", sub: "Top up and keep your momentum moving.", hook: "Activate and stay in the fight." };
+}
+
+function formatPackRow(p) {
+  const { base, bonus, total, price } = getPackNumbers(p);
+  const mc = packMicrocopy(total, price);
+
+  const totalLine = bonus > 0
+    ? `Total ${formatNumber(total)} • Bonus +${formatNumber(bonus)}`
+    : `Total ${formatNumber(total)} • No bonus`;
+
+  return `
+    <div class="packRow">
+      <div class="packLeft">
+        <div class="packTitle">${formatNumber(total)} coins · ${mc.name}</div>
+        <div class="packSub">${mc.sub}</div>
+        <div class="packMeta">${totalLine} · ${mc.hook}</div>
+      </div>
+      <div class="packRight">
+        <div class="pill">${formatGBP(price)}</div>
+        <button class="btn packBtn" data-pack="${encodeURIComponent(JSON.stringify(p))}">Activate</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderCoinPacks(packs) {
+  if (!coinPackList) return;
+
+  const safe = Array.isArray(packs) ? packs : [];
+
+  // Sort by total coins so the ladder feels “bigger = stronger protection”.
+  const sorted = [...safe].sort((a, b) => {
+    const at = getPackNumbers(a).total;
+    const bt = getPackNumbers(b).total;
+    return at - bt;
+  });
+
+  coinPackList.innerHTML = sorted.map(formatPackRow).join("");
+
+  // Bind buttons (data-pack contains encoded JSON of the pack object).
+  coinPackList.querySelectorAll(".packBtn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        const p = JSON.parse(decodeURIComponent(btn.dataset.pack || "{}"));
+        const sku = (p.sku || p.pack_sku || "").toString().trim();
+        if (!sku) {
+          showToast("Pack SKU missing. Check Supabase payment_products.");
+          return;
+        }
+
+        // Choose payment method (Card/Stripe vs Crypto/Coinbase)
+        const payWithCard = window.confirm(
+          "Choose payment method:\n\nOK = Card (Stripe)\nCancel = Crypto (Coinbase)"
+        );
+
+        const provider = payWithCard ? "stripe" : "coinbase";
+        showToast(payWithCard ? "Opening card checkout…" : "Opening crypto checkout…");
+
+        const r = await apiPost("/api/payments/create-checkout", { sku, provider });
+
+        if (r && r.ok && r.url) {
+          const opened = openExternalLink(r.url);
+          if (!opened) showToast("Couldn't open checkout. Please allow external links.");
+          return;
+        }
+
+        console.warn("Checkout failed:", r);
+        showToast(`Checkout failed: ${(r && (r.error || r.reason)) ? (r.error || r.reason) : "unknown error"}`);
+      } catch (e) {
+        console.error("Pack checkout error:", e);
+        showToast("Could not open this pack. Try again.");
+      }
+    });
+  });}
+
+async function loadCoinPacks() {
+  if (!coinPackList) return;
+  coinPackList.innerHTML = '<div style="padding:14px; opacity:.8;">Loading packs…</div>';
+
+  // 1) Try backend (will read from Supabase)
+  const res = await apiPost("/api/shop/coin-packs", {});
+  if (res && res.ok && Array.isArray(res.packs) && res.packs.length) {
+    renderCoinPacks(res.packs);
+    return;
+  }
+
+  // 2) Fallback to hardcoded list so the app never breaks during rollout
+  renderCoinPacks(FALLBACK_COIN_PACKS);
+}
+
+
+function openSponsorSheet() {
+  sheetBackdrop.classList.add("show");
+  sponsorSheet.classList.add("show");
+  setActiveTab(tabTasks);
+}
+
+function closeSponsorSheet() {
+  sponsorSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+  setActiveTab(tabFarm);
+
+  if (window.__sponsorCountdownTick) {
+    clearInterval(window.__sponsorCountdownTick);
+    window.__sponsorCountdownTick = null;
+  }
+}
+
+function fmtPayout(m) {
+  const amt = Number(m.payout_amount || 0);
+  if (!amt) return "";
+  if (m.payout_type === "points") return `+${amt.toLocaleString("en-GB")} pts`;
+  return `+${amt.toLocaleString("en-GB")}`;
+}
+
+function renderSponsorMissions(missions) {
+  // clear any existing countdown tick
+  if (window.__sponsorCountdownTick) {
+    clearInterval(window.__sponsorCountdownTick);
+    window.__sponsorCountdownTick = null;
+  }
+
+  if (!Array.isArray(missions) || missions.length === 0) {
+    sponsorList.innerHTML =
+      '<div style="opacity:.85;">No sponsor quests available right now. Check back soon.</div>';
+    return;
+  }
+
+  sponsorList.innerHTML = missions
+    .map((m) => {
+      const payout = fmtPayout(m);
+      const status = m.status || "not_started";
+      const cdRemaining = Number(m.cooldown_remaining_seconds || 0);
+      const waitRemaining = Number(m.wait_remaining_seconds || 0);
+
+      let btnText = "Start";
+      let btnDisabled = "";
+      let btnAction = "start";
+      let remaining = 0; // used by countdown ticker
+
+      if (cdRemaining > 0 || status === "cooldown") {
+        remaining = cdRemaining;
+        btnText = `Available in ${msToCountdown(remaining * 1000)}`;
+        btnDisabled = "disabled";
+        btnAction = "none";
+      } else if (status === "waiting") {
+        remaining = waitRemaining;
+        btnText = `Claim in ${msToCountdown(remaining * 1000)}`;
+        btnDisabled = "disabled";
+        btnAction = "none";
+      } else if (status === "claimable") {
+        btnText = "Claim";
+        btnAction = "claim";
+      } else if (status === "started") {
+        // backward compat: if backend hasn't labeled it yet, treat as waiting/claimable based on waitRemaining
+        if (waitRemaining > 0) {
+          remaining = waitRemaining;
+          btnText = `Claim in ${msToCountdown(remaining * 1000)}`;
+          btnDisabled = "disabled";
+          btnAction = "none";
+        } else {
+          btnText = "Claim";
+          btnAction = "claim";
+        }
+      }
+
+      return `
+        <div class="withdraw-row" style="align-items:flex-start; gap:12px;">
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px;"><div style="font-weight:700;">${m.title || m.code}</div><div class="pill ${status==="claimable" ? "good" : (status==="wait" ? "warn" : (status==="cooldown" ? "cooldown" : "dim"))}">${status==="claimable" ? "Claimable" : (status==="wait" ? "Waiting" : (status==="cooldown" ? "Cooldown" : "Available"))}</div></div>
+            <div style="opacity:.85; font-size:12px; line-height:1.3;">${m.description || ""}</div>
+            <div style="margin-top:6px; font-size:12px; opacity:.85;">${payout ? payout : ""}</div>
+          </div>
+          <button class="btn small" data-mcode="${m.code}" data-url="${m.url || ""}" data-action="${btnAction}" data-status="${status || ""}" data-wait="${Number(m.wait_seconds_remaining||m.wait_seconds||0)}" data-cooldown="${Number(m.cooldown_remaining_seconds||m.cooldown_seconds||0)}" data-remaining="${remaining}" data-mode="${(cdRemaining>0 || status==="cooldown") ? "cooldown" : "claim"}" ${btnDisabled}>
+            ${btnText}
+          </button>
+        </div>
+      `;
+    })
+    .join("");
+
+
+  // start live countdown ticker (updates button labels without re-fetch)
+  const updateCountdowns = () => {
+    const now = Date.now();
+    sponsorList.querySelectorAll('button[data-mcode]').forEach((btn) => {
+      const status = btn.getAttribute("data-status") || "";
+      const wait = Number(btn.getAttribute("data-wait") || "0");
+      const cd = Number(btn.getAttribute("data-cooldown") || "0");
+      let text = btn.textContent.trim();
+      // If backend gives remaining seconds, decrement locally
+      if (status === "wait" && wait > 0) {
+        const next = Math.max(0, wait - 1);
+        btn.setAttribute("data-wait", String(next));
+        btn.textContent = next > 0 ? `Claim in ${msToCountdown(next * 1000)}` : "Claim";
+        btn.disabled = next > 0;
+        btn.classList.toggle("dim", next > 0);
+      } else if (status === "cooldown" && cd > 0) {
+        const next = Math.max(0, cd - 1);
+        btn.setAttribute("data-cooldown", String(next));
+        btn.textContent = next > 0 ? `Available in ${msToCountdown(next * 1000)}` : "Start";
+        btn.disabled = next > 0;
+        btn.classList.toggle("dim", next > 0);
+      }
+    });
+  };
+
+  updateCountdowns();
+  window.__sponsorCountdownTick = setInterval(updateCountdowns, 1000);
+
+  sponsorList.querySelectorAll("button[data-mcode]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const code = btn.getAttribute("data-mcode");
+      const action = btn.getAttribute("data-action");
+      if (!code || action === "none") return;
+
+      if (action === "start") {
+        // Open link immediately (keeps user gesture so Telegram/webview does not block it)
+        const immediateUrl = btn.getAttribute("data-url") || getMissionUrl(code);
+        if (immediateUrl) {
+          const opened = openExternalLink(immediateUrl);
+          if (!opened) {
+            showToast("Couldn't open sponsor link. Please allow popups/external links in Telegram.");
+            return;
+          }
+        }
+
+        const res = await apiPost("/api/mission/start", { code });
+        if (!res || !res.ok) {
+          if (res && res.error === "MISSION_COOLDOWN") {
+            showToast(`Available in ${msToCountdown(Number(res.cooldown_seconds || res.cooldown_remaining_seconds || 0) * 1000)}`);
+            await loadSponsorMissions(true);
+            return;
+          }
+          if (res && res.error === "MISSION_TOO_FAST") {
+            showToast(`Claim in ${msToCountdown(Number(res.wait_seconds || 0) * 1000)}`);
+            await loadSponsorMissions(true);
+            return;
+          }
+          if (res && res.error === "MISSION_NOT_STARTED") {
+            showToast("Tap Start first.");
+            await loadSponsorMissions(true);
+            return;
+          }
+
+          showToast("Could not start quest.");
+          return;
+        }
+        // If we couldn't open instantly (no cached URL), fall back to backend-provided URL.
+        if (!immediateUrl && res.redirect_url) {
+          openExternalLink(res.redirect_url);
+        } else if (!immediateUrl && !res.redirect_url) {
+          showToast("Partner link coming soon.");
+        }
+        // optimistic UI: mark as started
+        const updated = (window.__sponsorMissions || []).map((m) =>
+          m.code === code ? { ...m, status: "started" } : m
+        );
+        window.__sponsorMissions = updated;
+        renderSponsorMissions(updated);
+        showToast("Quest started. Come back to claim.");
+        return;
+      }
+
+      if (action === "claim") {
+        // For sponsor quests, user expects the partner link to open on Claim too.
+        // Start the completion request first (do not block the click gesture),
+        // then open the external link immediately.
+        const immediateUrl = btn.getAttribute("data-url") || getMissionUrl(code);
+
+        const completionPromise = apiPost("/api/mission/complete", { code });
+
+        if (immediateUrl) {
+          const opened = openExternalLink(immediateUrl);
+          if (!opened) {
+            showToast("Couldn't open sponsor link. Please allow external links in Telegram.");
+            return;
+          }
+        }
+
+        const res = await completionPromise;
+        if (!res || !res.ok) {
+          if (res && res.error === "MISSION_COOLDOWN") {
+            showToast(`Available in ${msToCountdown(Number(res.cooldown_seconds || res.cooldown_remaining_seconds || 0) * 1000)}`);
+            await loadSponsorMissions(true);
+            return;
+          }
+          if (res && res.error === "MISSION_TOO_FAST") {
+            showToast(`Claim in ${msToCountdown(Number(res.wait_seconds || 0) * 1000)}`);
+            await loadSponsorMissions(true);
+            return;
+          }
+          if (res && res.error === "MISSION_NOT_STARTED") {
+            showToast("Tap Start first.");
+            await loadSponsorMissions(true);
+            return;
+          }
+          if (res && res.error === "MISSION_NO_URL") {
+            showToast("Sponsor link missing for this quest (admin config).");
+            await loadSponsorMissions(true);
+            return;
+          }
+          showToast("Could not claim reward.");
+          return;
+        }
+
+        showToast(`+${Number(res.payout_amount || 0).toLocaleString("en-GB")} points claimed!`);
+        await loadSponsorMissions(true);
+        await refreshBalance();
+        return;
+      }
+    });
+  });
+
+  // Live countdown tick for cooldown buttons
+  window.__sponsorCountdownTick = setInterval(async () => {
+    let anyExpired = false;
+    sponsorList.querySelectorAll("button[data-remaining]").forEach((b) => {
+      const rem = Number(b.getAttribute("data-remaining") || 0);
+      if (rem > 0) {
+        const next = rem - 1;
+        b.setAttribute("data-remaining", String(next));
+        if (next > 0) {
+          {
+          const mode = b.getAttribute("data-mode") || "claim";
+          const prefix = mode === "cooldown" ? "Available in " : "Claim in ";
+          b.textContent = `${prefix}${msToCountdown(next * 1000)}`;
+        }
+        } else {
+          anyExpired = true;
+        }
+      }
+    });
+    if (anyExpired) {
+      await loadSponsorMissions(true);
+    }
+  }, 1000);
+}
+
+async function loadSponsorMissions(forceRefresh = false) {
+  if (!forceRefresh && Array.isArray(window.__sponsorMissions)) {
+    renderSponsorMissions(window.__sponsorMissions);
+    return window.__sponsorMissions;
+  }
+
+  const res = await apiPost("/api/mission/list", { kind: "sponsor" });
+  const missions = (res && res.ok && Array.isArray(res.missions)) ? res.missions : [];
+
+  window.__sponsorMissions = missions;
+  renderSponsorMissions(missions);
+  return missions;
+}
+
+async function handleSponsorQuests() {
+  openSponsorSheet();
+  await loadSponsorMissions(true);
+}
+
+async function refreshVipStatus() {
+  vipStatusText.textContent = "Checking…";
+  vipBuyBtn.disabled = true;
+
+  // Pull VIP config (price/link) from backend (Supabase)
+  const vipProduct = await getVipProduct(false);
+  const priceLabel = vipProduct && vipProduct.price_gbp ? `£${Number(vipProduct.price_gbp).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "";
+  const title = vipProduct && vipProduct.title ? vipProduct.title : "VIP Pass (30 days)";
+
+  // Status (active/until) from backend
+  const res = await apiPost("/api/vip/status", {});
+  if (!res || !res.ok) {
+    vipStatusText.textContent = "Unavailable";
+    vipPerksText.textContent = "VIP perks: +50% max energy · +25% regen · +10% tap points · Daily VIP chest · +1 sponsor quest/day.";
+    vipBuyBtn.textContent = vipProduct ? `Get VIP · ${priceLabel || "Checkout"}` : "VIP not configured";
+    vipBuyBtn.disabled = !vipProduct;
+    return;
+  }
+
+  const active = !!res.vip_active;
+  if (active) {
+    const untilMs = Date.parse(res.vip_until);
+    const remaining = isNaN(untilMs) ? 0 : Math.max(0, untilMs - Date.now());
+    vipStatusText.textContent = remaining > 0 ? `Active · ${msToCountdown(remaining)}` : "Active";
+    vipPerksText.textContent = "VIP active ✅  +50% max energy · +25% regen · +10% tap points · Daily VIP chest · +1 sponsor quest/day.";
+    vipBuyBtn.textContent = "VIP is active";
+    vipBuyBtn.disabled = true;
+  } else {
+    vipStatusText.textContent = "Inactive";
+    vipPerksText.textContent = "VIP perks: +50% max energy · +25% regen · +10% tap points · Daily VIP chest · +1 sponsor quest/day.";
+    vipBuyBtn.textContent = vipProduct ? `${title} · ${priceLabel || "Checkout"}` : "VIP not configured";
+    vipBuyBtn.disabled = !vipProduct;
+  }
+}
+
+function handleCoinShop() {
+  openCoinShopSheet();
+}
+
+async function handleVipPass() {
+  openVipSheet();
+  await refreshVipStatus();
+}
+
+// Backwards compatibility (older cards / deep links)
+async function handleVipPremium() {
+  return handleVipPass();
+}
+
+async function buyVipPass() {
+  const vipProduct = await getVipProduct(true);
+  if (!vipProduct) {
+    showToast("VIP is not configured yet.");
+    return;
+  }
+
+  const payWithCard = window.confirm(
+    "Choose payment method for VIP:\n\nOK = Card (Stripe)\nCancel = Crypto (Coinbase)"
+  );
+
+  const provider = payWithCard ? "stripe" : "coinbase";
+  const sku = (vipProduct.sku || "vip_30d").toString().trim() || "vip_30d";
+  showToast(payWithCard ? "Opening card checkout…" : "Opening crypto checkout…");
+
+  const res = await apiPost("/api/payments/create-checkout", { sku, provider });
+  if (res && res.ok && res.url) {
+    const opened = openExternalLink(res.url);
+    if (!opened) showToast("Couldn't open checkout. Please allow external links.");
+    return;
+  }
+
+  showToast("VIP checkout unavailable. Check payment config.");
+}
+
+async function handleInviteTask() {
+  sheetBackdrop.classList.add("show");
+  friendsSheet.classList.add("show");
+  setActiveTab(tabFriends);
+  renderShareCardCanvas();
+  loadReferralStatus();
+  showToast("Share your link – you earn when friends actually join.");
+}
+
+function openFriendsSheet() {
+  sheetBackdrop.classList.add("show");
+  friendsSheet.classList.add("show");
+  setActiveTab(tabFriends);
+  renderShareCardCanvas();
+  loadReferralStatus();
+}
+
+
+// ⚡ Energy refill boost
+const ENERGY_REFILL_COST_CLIENT = 500;   // keep in sync with backend
+const DOUBLE_BOOST_COST_CLIENT = 1000;   // keep in sync with backend
+
+async function handleEnergyBoostTask() {
+  if ((state.energy || 0) >= maxEnergy) {
+    showToast("Your energy is already full.");
+    updateTaskCardStates();
+    return;
+  }
+
+  const hasPoints = (state.bal || 0) >= ENERGY_REFILL_COST_CLIENT;
+
+  // IMPORTANT UX:
+  // - OK = spend points
+  // - Cancel = sponsor action (free)
+  const ok = window.confirm(
+    `Refill energy now?
+
+OK = spend ${ENERGY_REFILL_COST_CLIENT.toLocaleString("en-GB")} points
+Cancel = complete a sponsor action`
+  );
+
+  // Optimistic spend (Hamster/Notcoin-level UX): deduct immediately, then reconcile with backend.
+  // If backend rejects, we roll back the balance.
+  let __prevBal = null;
+  if (ok) {
+    __prevBal = state.bal || 0;
+    state.bal = Math.max(0, __prevBal - ENERGY_REFILL_COST_CLIENT);
+    // Prevent a stale pre-spend backend response from immediately overwriting
+    // the optimistic spend with a higher balance.
+    window.__balanceCeilOnce = state.bal;
+    render();
+    updateTaskCardStates();
+  }
+
+  // CANCEL → sponsor action path
+  if (!ok) {
+    // Open sponsor smart-link instantly (pre-fetched from backend missions table)
+    const sponsorCode = "sp_emergency_energy";
+    const url = getMissionUrl(sponsorCode);
+    if (!url || !openExternalLink(url)) {
+      showToast("Couldn't open sponsor link. Please allow popups/external links in Telegram.");
+      return;
+    }
+
+    // Log the sponsor mission start (best-effort). This should not block the link opening.
+    apiPost("/api/mission/start", { code: sponsorCode });
+
+    // Grant the boost (backend allows sponsor boosts by default)
+    const res = await apiPost("/api/boost/energy", { method: "action" });
+
+    if (!res) {
+      if (__prevBal !== null) {
+        state.bal = __prevBal;
+        render();
+        updateTaskCardStates();
+      }
+      return;
+    }
+
+    if (!res.ok) {
+      if (__prevBal !== null) {
+        state.bal = __prevBal;
+        render();
+        updateTaskCardStates();
+      }
+      if (res.reason === "ENERGY_FULL") {
+        showToast("Your energy is already full.");
+      } else if (res.reason !== "NO_TELEGRAM_ID") {
+        showToast("Sponsor refill failed – try again.");
+      }
+      return;
+    }
+
+    window.__allowBalanceDecreaseOnce = true;
+  applyBackendState(res);
+    render();
+    updateTaskCardStates();
+
+    showToast(res.message || "⚡ Sponsor action complete – energy refilled!");
+    return;
+  }
+
+  // OK → points path
+  if (!hasPoints) {
+    showToast(`Need ${ENERGY_REFILL_COST_CLIENT.toLocaleString("en-GB")} points to refill.`);
+    return;
+  }
+
+  const res = await apiPost("/api/boost/energy", { method: "points" });
+
+  if (!res) {
+    if (__prevBal !== null) {
+      state.bal = __prevBal;
+      window.__balanceCeilOnce = null;
+      render();
+      updateTaskCardStates();
+    }
+    return;
+  }
+
+  if (!res.ok) {
+    if (__prevBal !== null) {
+      state.bal = __prevBal;
+      window.__balanceCeilOnce = null;
+      render();
+      updateTaskCardStates();
+    }
+    if (res.reason === "ENERGY_FULL") {
+      showToast("Your energy is already full.");
+    } else if (res.reason === "NOT_ENOUGH_POINTS") {
+      showToast("Not enough points for energy refill.");
+    } else if (res.reason !== "NO_TELEGRAM_ID") {
+      showToast("Energy boost failed – try again.");
+    }
+    return;
+  }
+
+  window.__allowBalanceDecreaseOnce = true;
+  applyBackendState(res);
+  render();
+  updateTaskCardStates();
+
+  showToast(res.message || "⚡ Energy refilled!");
+}
+
+// Double points boost handler
+async function handleDoubleBoostTask() {
+  if (state.doubleBoostActive) {
+    showToast("Double points is already active.");
+    updateTaskCardStates();
+    return;
+  }
+
+  const hasPoints = (state.bal || 0) >= DOUBLE_BOOST_COST_CLIENT;
+
+  // Cancel → sponsor action (free), OK → spend points
+  const ok = window.confirm(
+    `Activate x2 taps for 10 minutes?\n\n` +
+      `Press OK to spend ${DOUBLE_BOOST_COST_CLIENT.toLocaleString("en-GB")} points.\n` +
+      `Press Cancel to complete a sponsor action (free).`
+  );
+
+  // Optimistic spend: deduct immediately for instant feedback, then reconcile with backend.
+  // If backend rejects, roll back.
+  let __prevBal = null;
+  if (ok) {
+    __prevBal = state.bal || 0;
+    state.bal = Math.max(0, __prevBal - DOUBLE_BOOST_COST_CLIENT);
+    // Prevent a stale pre-spend backend response from overwriting the
+    // optimistic spend with a higher balance.
+    window.__balanceCeilOnce = state.bal;
+    render();
+    updateTaskCardStates();
+  }
+
+  if (!ok) {
+    // Sponsor action path (open link instantly)
+    const sponsorCode = "sp_double_points";
+    const url = getMissionUrl(sponsorCode);
+    if (!url || !openExternalLink(url)) {
+      showToast("Couldn't open sponsor link. Please allow popups/external links in Telegram.");
+      return;
+    }
+
+    // Log sponsor mission start (best-effort)
+    apiPost("/api/mission/start", { code: sponsorCode });
+
+    const res = await apiPost("/api/boost/double", { method: "action" });
+
+    if (!res) {
+      if (__prevBal !== null) {
+        state.bal = __prevBal;
+        render();
+        updateTaskCardStates();
+      }
+      return;
+    }
+
+    if (!res.ok) {
+      if (__prevBal !== null) {
+        state.bal = __prevBal;
+        render();
+        updateTaskCardStates();
+      }
+      if (res.reason !== "NO_TELEGRAM_ID") {
+        showToast("Sponsor boost failed – try again.");
+      }
+      return;
+    }
+
+    window.__allowBalanceDecreaseOnce = true;
+  applyBackendState(res);
+    render();
+    updateTaskCardStates();
+
+    showToast(res.message || "✨ Sponsor action complete – double points activated!");
+    return;
+  }
+
+  // Points path
+  if (!hasPoints) {
+    showToast(`Need ${DOUBLE_BOOST_COST_CLIENT.toLocaleString("en-GB")} points for double boost.`);
+    return;
+  }
+
+  const res = await apiPost("/api/boost/double", { method: "points" });
+
+  if (!res) {
+    if (__prevBal !== null) {
+      state.bal = __prevBal;
+      window.__balanceCeilOnce = null;
+      render();
+      updateTaskCardStates();
+    }
+    return;
+  }
+
+  if (!res.ok) {
+    if (__prevBal !== null) {
+      state.bal = __prevBal;
+      window.__balanceCeilOnce = null;
+      render();
+      updateTaskCardStates();
+    }
+    if (res.reason === "NOT_ENOUGH_POINTS") {
+      showToast("Not enough points for double boost.");
+    } else if (res.reason !== "NO_TELEGRAM_ID") {
+      showToast("Double boost failed – try again.");
+    }
+    return;
+  }
+
+  window.__allowBalanceDecreaseOnce = true;
+  applyBackendState(res);
+  render();
+  updateTaskCardStates();
+
+  showToast(res.message || "✨ Double points boost activated!");
+}
+
+// Task click router (includes double_boost)
+document.querySelectorAll(".task-card").forEach((card) => {
+  card.addEventListener("click", () => {
+    if (card.classList.contains("task-disabled")) {
+      const codeDisabled = card.getAttribute("data-code");
+      if (codeDisabled === "daily") {
+        showToast("Daily check-in is on cooldown.");
+      } else if (codeDisabled === "double_boost") {
+        showToast("Double points is already active.");
+      } else if (codeDisabled === "boost_energy") {
+        showToast("Energy is already full.");
+      } else {
+        showToast("This quest is not available right now.");
+      }
+      return;
+    }
+    if (card.classList.contains("task-disabled")) {
+      // Keep UX clean: explain why it's disabled
+      const codeDisabled = card.getAttribute("data-code");
+      if (codeDisabled === "daily") {
+        showToast("Daily check-in is on cooldown.");
+      } else if (codeDisabled === "double_boost") {
+        showToast("Double points is already active.");
+      } else if (codeDisabled === "boost_energy") {
+        showToast("Energy is already full.");
+      } else {
+        showToast("This quest is not available yet.");
+      }
+      return;
+    }
+
+    const code = card.getAttribute("data-code");
+    const reward = parseInt(card.getAttribute("data-reward") || "0", 10);
+
+    if (code === "daily") {
+      handleDailyTask(reward);
+    } else if (code === "coin_shop") {
+      handleCoinShop();
+    } else if (code === "boost_hub") {
+      handleCoinShop();
+    } else if (code === "leaderboard") {
+      setActiveTab(tabFriends);
+      openLeaderboard("friends");
+    } else if (code === "open_tasks") {
+      setActiveTab(tabTasks);
+      handleSponsorQuests();
+      showToast("Complete tasks to keep momentum.");
+    } else if (code === "vip_pass") {
+      handleVipPass();
+    } else if (code === "invite_friend") {
+      handleInviteTask();
+    } else if (code === "double_boost") {
+      handleDoubleBoostTask();
+    } else if (code === "boost_energy") {
+      handleEnergyBoostTask();
+    } else if (code === "sponsor_quests") {
+      handleSponsorQuests();
+    }
+  });
+});
+
+function setActiveTab(activeBtn) {
+  [tabFarm, tabTasks, tabFriends, tabWithdraw].forEach((btn) => {
+    if (!btn) return;
+    if (btn === activeBtn) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+}
+
+tabFarm.addEventListener("click", () => {
+  setActiveTab(tabFarm);
+  sheetBackdrop.classList.remove("show");
+  friendsSheet.classList.remove("show");
+  withdrawSheet.classList.remove("show");
+});
+
+tabTasks.addEventListener("click", () => {
+  setActiveTab(tabTasks);
+  openCoinShopSheet(); // Boost Hub / Fuel Packs
+});
+
+tabFriends.addEventListener("click", () => {
+  setActiveTab(tabFriends);
+  openFriendsSheet(); // Invite + share card
+});
+
+tabWithdraw.addEventListener("click", async () => {
+  setActiveTab(tabWithdraw);
+  sheetBackdrop.classList.add("show");
+  withdrawSheet.classList.add("show");
+  const res = await apiPost("/api/withdraw/info", {});
+  if (res && res.ok && typeof res.balance === "number") {
+    withdrawBalanceText.textContent = formatNumber(res.balance);
+  } else {
+    withdrawBalanceText.textContent = formatNumber(state.bal);
+  }
+});
+
+friendsClose.addEventListener("click", () => {
+  friendsSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+  setActiveTab(tabFarm);
+});
+
+withdrawClose.addEventListener("click", () => {
+  withdrawSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+  setActiveTab(tabFarm);
+});
+
+vipClose.addEventListener("click", () => {
+  closeVipSheet();
+  setActiveTab(tabFarm);
+});
+
+sponsorClose.addEventListener("click", () => {
+  sponsorSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+  setActiveTab(tabFarm);
+});
+
+
+vipBuyBtn.addEventListener("click", () => {
+  buyVipPass();
+});
+
+// Enable and wire the coin packs button (keeps the rest of the app unchanged)
+if (vipPacksBtn) {
+  vipPacksBtn.disabled = false;
+  vipPacksBtn.addEventListener("click", () => {
+    openCoinShopSheet();
+  });
+}
+
+// Floating Boost button should always work (independent of the tile click)
+if (fabShop) {
+  fabShop.addEventListener("click", () => {
+    handleCoinShop();
+  });
+}
+
+if (coinShopClose) {
+  coinShopClose.addEventListener("click", () => {
+    closeCoinShopSheet();
+    setActiveTab(tabFarm);
+  });
+}
+
+sheetBackdrop.addEventListener("click", () => {
+  friendsSheet.classList.remove("show");
+  withdrawSheet.classList.remove("show");
+  vipSheet.classList.remove("show");
+  sponsorSheet.classList.remove("show");
+  coinShopSheet.classList.remove("show");
+  sheetBackdrop.classList.remove("show");
+  setActiveTab(tabFarm);
+});
+
+copyInviteBtn.addEventListener("click", async () => {
+  const link = state.inviteLink || FALLBACK_REF_LINK;
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast("Invite link copied");
+  } catch (e) {
+    showToast("Could not copy link");
+  }
+});
+
+shareTelegramBtn.addEventListener("click", () => {
+  const link = state.inviteLink || FALLBACK_REF_LINK;
+  const text = encodeURIComponent(
+    `🔥 Join me in JigCoin and farm the airdrop:\n${link}`
+  );
+  window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`, "_blank");
+});
+
+
+if (copyShareTextBtn) {
+  copyShareTextBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(buildShareText());
+      showToast("Share text copied");
+    } catch (e) {
+      showToast("Could not copy share text");
+    }
+  });
+}
+
+if (downloadShareCardBtn) {
+  downloadShareCardBtn.addEventListener("click", () => {
+    const c = document.getElementById("shareCardCanvas");
+    if (!c) return;
+    try {
+      const a = document.createElement("a");
+      a.href = c.toDataURL("image/png");
+      a.download = "jigcoin-share-card.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast("Share card downloaded");
+    } catch (e) {
+      showToast("Could not download card");
+    }
+  });
+}
+
+// keep share card fresh
+setTimeout(() => renderShareCardCanvas(), 0);
+
+
+// ---------------- LEADERBOARD OVERLAY ----------------
+const leaderboardHTML = `
+  <div id="leaderboardScreen" style="
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    background: radial-gradient(circle at top left, rgba(251,191,36,0.15), transparent 55%),
+                radial-gradient(circle at bottom right, rgba(59,130,246,0.25), #020617 65%);
+    color: #e5e7eb;
+    /* Telegram mini-app header + iOS safe areas can overlap fixed overlays.
+       Add breathing room so the close button and bottom tip are always visible. */
+    padding: calc(16px + env(safe-area-inset-top, 0px) + 48px) 16px calc(24px + env(safe-area-inset-bottom, 0px) + 88px) 16px;
+    box-sizing: border-box;
+  ">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <div style="display:flex; flex-direction:column;">
+        <span style="font-size:14px; opacity:0.7;">Season 0 · You’re early</span>
+        <span style="font-size:20px; font-weight:700;">Leaderboard</span>
+        <span style="font-size:12px; opacity:0.7; margin-top:2px;">Rankings update daily · Protect momentum</span>
+      </div>
+      <button id="lbCloseBtn" style="
+        width:32px;
+        height:32px;
+        border-radius:999px;
+        border:none;
+        background:rgba(15,23,42,0.9);
+        color:#e5e7eb;
+        font-size:18px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 56px);
+        right: 16px;
+        z-index: 10001;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      ">
+        ×
+      </button>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <button id="lbTabGlobal" class="lb-tab-btn" style="
+        flex:1;
+        border-radius:999px;
+        border:none;
+        padding:8px 0;
+        font-size:14px;
+        font-weight:600;
+        background:rgba(15,23,42,0.9);
+        color:#e5e7eb;
+      ">Global</button>
+      <button id="lbTabDaily" class="lb-tab-btn" style="
+        flex:1;
+        border-radius:999px;
+        border:none;
+        padding:8px 0;
+        font-size:14px;
+        font-weight:600;
+        background:rgba(15,23,42,0.5);
+        color:#9ca3af;
+      ">Daily</button>
+      <button id="lbTabFriends" class="lb-tab-btn" style="
+        flex:1;
+        border-radius:999px;
+        border:none;
+        padding:8px 0;
+        font-size:14px;
+        font-weight:600;
+        background:rgba(15,23,42,0.5);
+        color:#9ca3af;
+      ">Friends</button>
+    </div>
+
+    <div id="lbMySummary" style="
+      border-radius:16px;
+      padding:10px 12px;
+      background:linear-gradient(90deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9));
+      margin-bottom:12px;
+      font-size:12px;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+    ">
+      <div id="lbMySummaryText">Your rank info will appear here.</div>
+    </div>
+
+    <div id="lbOvertakeBanner" style="display:none; margin-bottom:12px;"></div>
+
+    <div id="lbContent" style="
+      flex:1;
+      overflow-y:auto;
+      padding-right:4px;
+      /* keep list readable above the fixed footer tip */
+      padding-bottom:80px;
+    ">
+    </div>
+
+    <div id="lbFooterInvite" style="
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
+      font-size: 12px;
+      opacity: 0.92;
+      text-align: center;
+      z-index: 10002;
+      pointer-events: none;
+      padding: 8px 10px;
+      border-radius: 14px;
+      background: rgba(10, 12, 18, 0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+    ">
+      Invite friends from the Friends tab to climb the leaderboard faster.
+    </div>
+  </div>
+`;
+
+document.body.insertAdjacentHTML("beforeend", leaderboardHTML);
+
+const leaderboardScreen = document.getElementById("leaderboardScreen");
+const lbCloseBtn = document.getElementById("lbCloseBtn");
+const lbTabGlobal = document.getElementById("lbTabGlobal");
+const lbTabDaily = document.getElementById("lbTabDaily");
+const lbTabFriends = document.getElementById("lbTabFriends");
+const lbContent = document.getElementById("lbContent");
+const lbMySummary = document.getElementById("lbMySummary");
+const lbMySummaryText = document.getElementById("lbMySummaryText");
+const lbOvertakeBanner = document.getElementById("lbOvertakeBanner");
+const lbFooterInvite = document.getElementById("lbFooterInvite");
+function setLeaderboardTabActive(activeKey) {
+  const tabs = [
+    { key: "global", el: lbTabGlobal },
+    { key: "daily", el: lbTabDaily },
+    { key: "friends", el: lbTabFriends },
+  ];
+  tabs.forEach(({ key, el }) => {
+    if (!el) return;
+    if (key === activeKey) {
+      el.style.background = "linear-gradient(135deg,#fbbf24,#fb923c)";
+      el.style.color = "#111827";
+    } else {
+      el.style.background = "rgba(15,23,42,0.7)";
+      el.style.color = "#9ca3af";
+    }
+  });
+}
+
+function openLeaderboard(initialTab) {
+  if (!leaderboardScreen) return;
+  leaderboardScreen.style.display = "flex";
+  document.body.style.overflow = "hidden";
+  const tab = initialTab || "global";
+  if (tab === "friends") {
+    setLeaderboardTabActive("friends");
+    loadFriendsLeaderboard();
+  } else if (tab === "daily") {
+    setLeaderboardTabActive("daily");
+    loadDailyLeaderboard();
+  } else {
+    setLeaderboardTabActive("global");
+    loadGlobalLeaderboard();
+  }
+}
+
+function closeLeaderboard() {
+  if (!leaderboardScreen) return;
+  leaderboardScreen.style.display = "none";
+  document.body.style.overflow = "";
+}
+
+lbCloseBtn.addEventListener("click", () => {
+  closeLeaderboard();
+  setActiveTab(tabFarm);
+});
+
+function renderMySummary(prefix, rank, total) {
+  if (!lbMySummaryText) return;
+  if (!rank || !total) {
+    lbMySummaryText.textContent = "Play to join the leaderboard.";
+    return;
+  }
+  lbMySummaryText.textContent = `${prefix} #${formatNumber(rank)} of ${formatNumber(total)} players`;
+}
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+
+function renderList(items, getRank, getName, getValue, highlightTid) {
+  if (!lbContent) return;
+  if (!Array.isArray(items) || items.length === 0) {
+    lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">No data yet. Start playing to appear here.</div>';
+    return;
+  }
+  let html = "";
+  for (const row of items) {
+    const rank = getRank(row);
+    const nameRaw = getName(row) || "Player";
+    const name = escapeHtml(nameRaw);
+    const value = getValue(row);
+    const isMe = highlightTid && Number(row.telegram_id) === Number(highlightTid);
+    html += `
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        padding:10px 12px;
+        margin-bottom:8px;
+        border-radius:12px;
+        background:${isMe ? "rgba(251,191,36,0.15)" : "rgba(15,23,42,0.9)"};
+        border:${isMe ? "1px solid rgba(251,191,36,0.8)" : "1px solid rgba(15,23,42,0.9)"};
+        font-size:13px;
+      ">
+        <div>
+          <div style="font-weight:600;">#${formatNumber(rank)} · ${name}</div>
+        </div>
+        <div style="text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;">
+          <div style="font-size:13px; font-weight:600; letter-spacing:0.01em;">${formatNumber(value)} pts</div>
+        </div>
+      </div>
+    `;
+  }
+  lbContent.innerHTML = html;
+}
+
+function loadGlobalLeaderboard() {
+  lbOvertakeBanner.style.display = "none";
+  lbOvertakeBanner.innerHTML = "";
+  lbFooterInvite.style.display = "block";
+  lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Loading global leaderboard…</div>';
+  apiPost("/api/leaderboard/global", {}).then((res) => {
+    if (!res || !res.ok) {
+      lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Error loading leaderboard.</div>';
+      renderMySummary("Global rank", null, null);
+      return;
+    }
+    const me = res.me || {};
+    renderMySummary("Global rank", me.global_rank, me.global_total);
+    renderList(
+      res.global || [],
+      (row) => row.global_rank,
+      (row) => row.username || row.first_name || row.last_name,
+      (row) => row.balance || 0,
+      me.telegram_id
+    );
+  });
+}
+
+function loadDailyLeaderboard() {
+  lbOvertakeBanner.style.display = "none";
+  lbOvertakeBanner.innerHTML = "";
+  lbFooterInvite.style.display = "block";
+  lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Loading daily ranks…</div>';
+  apiPost("/api/leaderboard/daily", {}).then((res) => {
+    if (!res || !res.ok) {
+      lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Error loading daily leaderboard.</div>';
+      renderMySummary("Daily rank", null, null);
+      return;
+    }
+    const me = res.me || {};
+    renderMySummary("Daily rank", me.daily_rank, me.daily_total);
+    renderList(
+      res.daily || [],
+      (row) => row.daily_rank,
+      (row) => row.username || row.first_name || row.last_name,
+      (row) => row.today_farmed || 0,
+      me.telegram_id
+    );
+  });
+}
+
+function loadFriendsLeaderboard() {
+  lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Loading friends leaderboard…</div>';
+  apiPost("/api/leaderboard/friends", {}).then((res) => {
+    if (!res || !res.ok) {
+      lbContent.innerHTML = '<div style="padding:24px; text-align:center; opacity:0.7;">Error loading friends leaderboard.</div>';
+      renderMySummary("Friends rank", null, null);
+      lbOvertakeBanner.style.display = "none";
+      lbOvertakeBanner.innerHTML = "";
+      lbFooterInvite.style.display = "block";
+      return;
+    }
+    const me = res.me || {};
+    renderMySummary("Friends rank", me.friend_rank, (res.friends || []).length);
+
+    if (res.overtake && res.overtake.target_display_name && typeof res.overtake.need_points === "number") {
+      lbOvertakeBanner.style.display = "block";
+      lbOvertakeBanner.innerHTML = `
+        <div style="
+          border-radius:16px;
+          padding:10px 12px;
+          background:linear-gradient(90deg,#fbbf24,#fb923c);
+          color:#111827;
+          font-size:13px;
+          font-weight:600;
+          text-align:left;
+          margin-bottom:4px;
+        ">
+          ⭐ Overtake ${res.overtake.target_display_name} by +${formatNumber(res.overtake.need_points)} pts
+        </div>
+      `;
+    } else {
+      lbOvertakeBanner.style.display = "none";
+      lbOvertakeBanner.innerHTML = "";
+    }
+
+    lbFooterInvite.style.display = "block";
+    renderList(
+      res.friends || [],
+      (row) => row.friend_rank,
+      (row) => row.username || row.first_name || row.last_name,
+      (row) => row.balance || 0,
+      me.telegram_id
+    );
+  });
+}
+
+lbTabGlobal.addEventListener("click", () => {
+  setLeaderboardTabActive("global");
+  loadGlobalLeaderboard();
+});
+
+lbTabDaily.addEventListener("click", () => {
+  setLeaderboardTabActive("daily");
+  loadDailyLeaderboard();
+});
+
+lbTabFriends.addEventListener("click", () => {
+  setLeaderboardTabActive("friends");
+  loadFriendsLeaderboard();
+});
+
+// Init
+loadStateLocal();
+render();
+// Preload sponsor URLs so link taps never get blocked by async timing
+prefetchMissionUrls();
+initFromBackend();
+
+// Keep countdown labels/timers fresh without needing a refresh
+setInterval(() => {
+  updateTaskCardStates();
+}, 1000);
+
+// Auto-refresh from backend (energy, rank, etc.)
+setInterval(async () => {
+  const res = await apiPost("/api/state", {});
+  if (res && res.ok) {
+    applyBackendState(res);
+    render();
+  }
+}, 15000);
+  </script>
+
+<script>
+
+  // Startup FOMO modal (blocking until acknowledged)
+  // Shows on every app open until the first 1,000 users are reached.
+  document.addEventListener("DOMContentLoaded", () => {
+    const backdrop = document.getElementById("fomoBackdrop");
+    const modal = document.getElementById("fomoModal");
+    if(!backdrop || !modal) return;
+
+    const show = () => { backdrop.style.display="block"; modal.style.display="block"; };
+    const hide = () => { backdrop.style.display="none"; modal.style.display="none"; };
+
+    // Decide whether Early Access announcement is active (server-side user count)
+    const spotsEl = document.getElementById("fomoSpotsLeft");
+    const inviteBonusEl = document.getElementById("fomoInviteBonus");
+    const inviteBtnAmtEl = document.getElementById("fomoInviteBtnAmt");
+    const countdownEl = document.getElementById("fomoCountdown");
+    const launchBoostCountdownEl = document.getElementById("launchBoostCountdown");
+    const LIMIT = 1000;
+    const fallbackInviteBonus = 800;
+
+    function fmtCountdown(sec){
+      if (sec == null) return "Limited";
+      const s = Math.max(0, Number(sec)||0);
+      const hh = Math.floor(s / 3600);
+      const mm = Math.floor((s % 3600) / 60);
+      const ss = Math.floor(s % 60);
+      const pad = (n) => String(n).padStart(2,"0");
+      if (hh <= 0) return `${pad(mm)}:${pad(ss)}`;
+      return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+    }
+
+    let countdownSeconds = null;
+    let countdownTimer = null;
+
+    async function refreshAndMaybeShow(){
+      try{
+        const r = await fetch(API_BASE + "/api/stats", { method: "GET" });
+        const data = await r.json().catch(()=>null);
+        const total = Number(data?.total_users ?? data?.totalUsers ?? 0);
+        const remaining = Number(data?.early_bonus_remaining ?? Math.max(0, LIMIT - total));
+        const active = (data && data.ok) ? Boolean(data.early_bonus_active) : (total < LIMIT);
+        const inviteBonus = Number(data?.invite_bonus ?? fallbackInviteBonus);
+        const endsIn = (data && data.ok) ? (data.early_bonus_ends_in ?? null) : null;
+
+        if (inviteBonusEl) inviteBonusEl.textContent = inviteBonus.toLocaleString("en-GB");
+        if (inviteBtnAmtEl) inviteBtnAmtEl.textContent = inviteBonus.toLocaleString("en-GB");
+        if (spotsEl) spotsEl.textContent = remaining.toLocaleString("en-GB");
+
+        countdownSeconds = (endsIn == null || endsIn === "") ? null : Number(endsIn);
+        if (countdownEl) countdownEl.textContent = fmtCountdown(countdownSeconds);
+        if (launchBoostCountdownEl) {
+          launchBoostCountdownEl.textContent = `⏳ Window: ${fmtCountdown(countdownSeconds)} left`;
+        }
+
+        if (!countdownTimer) {
+          countdownTimer = setInterval(() => {
+            if (countdownSeconds == null) {
+              if (countdownEl) countdownEl.textContent = "Limited";
+              if (launchBoostCountdownEl) launchBoostCountdownEl.textContent = "⏳ Window: Limited";
+              return;
+            }
+            countdownSeconds = Math.max(0, countdownSeconds - 1);
+            if (countdownEl) countdownEl.textContent = fmtCountdown(countdownSeconds);
+            if (launchBoostCountdownEl) launchBoostCountdownEl.textContent = `⏳ Window: ${fmtCountdown(countdownSeconds)} left`;
+          }, 1000);
+        }
+
+        if(active){
+          show();
+        } else {
+          hide();
+        }
+      } catch(_e){
+        // If stats fail, still show (better for conversion than silence)
+        if (inviteBonusEl) inviteBonusEl.textContent = fallbackInviteBonus.toLocaleString("en-GB");
+        if (inviteBtnAmtEl) inviteBtnAmtEl.textContent = fallbackInviteBonus.toLocaleString("en-GB");
+        if (spotsEl) spotsEl.textContent = "—";
+        if (countdownEl) countdownEl.textContent = "Limited";
+        if (launchBoostCountdownEl) launchBoostCountdownEl.textContent = "⏳ Window: Limited";
+        show();
+      }
+    }
+
+    // Run once per app open
+    refreshAndMaybeShow();
+
+    const okBtn = document.getElementById("fomoOkBtn");
+    const inviteBtn = document.getElementById("fomoInviteBtn");
+
+    const acknowledge = async () => {
+      // Must acknowledge to continue; do not suppress future opens while Early Access is active.
+      hide();
+      // Trigger a state refresh so the server can award the Early Access starter bonus immediately.
+      try { await refreshState(); } catch (e) {}
+    };
+
+    okBtn && okBtn.addEventListener("click", acknowledge);
+
+    inviteBtn && inviteBtn.addEventListener("click", () => {
+      acknowledge();
+      const tab = document.getElementById("tabFriends");
+      tab && tab.click();
+    });
+
+    // Prevent closing by clicking backdrop
+    backdrop.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); });
+});
+
+</script>
+
+
+  <!-- Startup FOMO Modal -->
+  <div class="fomo-backdrop" id="fomoBackdrop" style="display:none;"></div>
+  <div class="fomo-modal" id="fomoModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="fomoTitle">
+    <div class="fomo-title" id="fomoTitle">🚀 Launch Phase: Early Access</div>
+    <p class="fomo-copy">
+      <b>First 1,000 players</b> lock the early allocation window (+<b>5,000</b> starter coins).<br>
+      <span class="fomo-spots">Spots left: <b id="fomoSpotsLeft">—</b></span>
+      <br>
+      <span class="fomo-spots">Ends in: <b id="fomoCountdown">—</b></span>
+    </p>
+    <ul class="fomo-bullets">
+      <li><span class="dot">🔥</span><span><b>Invite bonuses LIVE:</b> +<b id="fomoInviteBonus">800</b> coins per friend.</span></li>
+      <li><span class="dot">🏆</span><span>Climb <b>Global Rank</b> to unlock perks and stronger allocation.</span></li>
+    </ul>
+    <div class="fomo-actions">
+      <button class="ghost" id="fomoInviteBtn">Invite & earn +<span id="fomoInviteBtnAmt">800</span></button>
+      <button id="fomoOkBtn">Start farming</button>
+    </div>
+    <div class="fomo-fine">You must acknowledge this message to continue.</div>
+  </div>
+
+</body>
+</html>
